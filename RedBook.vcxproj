@@ -22,7 +22,7 @@
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{958cc3e6-a8b4-4939-b4d3-6e2c46a6331d}</ProjectGuid>
-    <RootNamespace>WindowsProject1</RootNamespace>
+    <RootNamespace>RedBook</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>RedBookApp</ProjectName>
   </PropertyGroup>
