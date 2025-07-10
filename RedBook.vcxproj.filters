@@ -61,6 +61,9 @@
     <ClInclude Include="Perlin.h">
       <Filter>Utilities\Headers</Filter>
     </ClInclude>
+    <ClInclude Include="MathToolkit.h">
+      <Filter>Utilities\Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">

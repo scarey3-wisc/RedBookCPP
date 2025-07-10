@@ -105,7 +105,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)external\glfw-3.4\include\;$(ProjectDir)external\imgui\backends\;$(ProjectDir)external\imgui\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)external\glm\glm\;$(ProjectDir)external\glfw-3.4\include\;$(ProjectDir)external\imgui\backends\;$(ProjectDir)external\imgui\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -125,7 +125,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)external\glfw-3.4\include\;$(ProjectDir)external\imgui\backends\;$(ProjectDir)external\imgui\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)external\glm\glm\;$(ProjectDir)external\glfw-3.4\include\;$(ProjectDir)external\imgui\backends\;$(ProjectDir)external\imgui\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -149,6 +149,7 @@
     <ClInclude Include="external\imgui\imstb_rectpack.h" />
     <ClInclude Include="external\imgui\imstb_textedit.h" />
     <ClInclude Include="external\imgui\imstb_truetype.h" />
+    <ClInclude Include="MathToolkit.h" />
     <ClInclude Include="Perlin.h" />
     <ClInclude Include="Switches.h" />
   </ItemGroup>
