@@ -26,6 +26,24 @@
     <ClCompile Include="Perlin.cpp">
       <Filter>Utilities\Source</Filter>
     </ClCompile>
+    <ClCompile Include="SamplePoint.cpp">
+      <Filter>Maps\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshPoint.cpp">
+      <Filter>Maps\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshConnection.cpp">
+      <Filter>Maps\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshMidPoint.cpp">
+      <Filter>Maps\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainTemplate.cpp">
+      <Filter>Utilities\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainType.cpp">
+      <Filter>Utilities\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\imgui\imconfig.h">
@@ -62,6 +80,24 @@
       <Filter>Utilities\Headers</Filter>
     </ClInclude>
     <ClInclude Include="MathToolkit.h">
+      <Filter>Utilities\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SamplePoint.h">
+      <Filter>Maps\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshPoint.h">
+      <Filter>Maps\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshConnection.h">
+      <Filter>Maps\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshMidPoint.h">
+      <Filter>Maps\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainTemplate.h">
+      <Filter>Utilities\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainType.h">
       <Filter>Utilities\Headers</Filter>
     </ClInclude>
   </ItemGroup>

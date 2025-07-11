@@ -7,19 +7,19 @@
 class Perlin
 {
 public:
-	inline Perlin(Perlin pf, double t, bool abs)
+	Perlin(Perlin pf, double t, bool abs)
 		: scale(pf.scale), offset(pf.offset), octaves(pf.octaves), octaveScale(pf.octaveScale), threshold(t),
 		thresholdSet(true), absThreshold(abs), seed(pf.seed)
 	{
 
 	}
-	inline Perlin(double s, double o, int oct, double fs)
+	Perlin(double s, double o, int oct, double fs)
 		: scale(s), offset(o), octaves(oct), octaveScale(fs), threshold(0),
 		thresholdSet(false), absThreshold(false), seed(0)
 	{
 		GenerateSeed();
 	}
-	inline Perlin(double s, double o, int oct, double fs, double t, bool abs)
+	Perlin(double s, double o, int oct, double fs, double t, bool abs)
 		: scale(s), offset(o), octaves(oct), octaveScale(fs), threshold(t),
 		thresholdSet(true), absThreshold(abs), seed(0)
 	{
@@ -46,7 +46,7 @@ private:
 	glm::dvec2 GradDotGridGradientForPerlin(int ix, int iy, double x, double y);
 
 
-	inline void GenerateSeed()
+	void GenerateSeed()
 	{
 		std::random_device rd;
 		std::mt19937 eng(rd());

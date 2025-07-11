@@ -150,8 +150,14 @@
     <ClInclude Include="external\imgui\imstb_textedit.h" />
     <ClInclude Include="external\imgui\imstb_truetype.h" />
     <ClInclude Include="MathToolkit.h" />
+    <ClInclude Include="MeshConnection.h" />
+    <ClInclude Include="MeshMidPoint.h" />
+    <ClInclude Include="MeshPoint.h" />
     <ClInclude Include="Perlin.h" />
+    <ClInclude Include="SamplePoint.h" />
     <ClInclude Include="Switches.h" />
+    <ClInclude Include="TerrainTemplate.h" />
+    <ClInclude Include="TerrainType.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp" />
@@ -161,8 +167,14 @@
     <ClCompile Include="external\imgui\imgui_draw.cpp" />
     <ClCompile Include="external\imgui\imgui_tables.cpp" />
     <ClCompile Include="external\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="MeshConnection.cpp" />
+    <ClCompile Include="MeshMidPoint.cpp" />
+    <ClCompile Include="MeshPoint.cpp" />
     <ClCompile Include="Perlin.cpp" />
     <ClCompile Include="RedBook.cpp" />
+    <ClCompile Include="SamplePoint.cpp" />
+    <ClCompile Include="TerrainTemplate.cpp" />
+    <ClCompile Include="TerrainType.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
