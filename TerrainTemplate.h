@@ -23,7 +23,7 @@ public:
 	uint8_t QueryQuality(uint8_t comp) { return (uint8_t) (value & comp); }
 	bool HasQuality(uint8_t comp) { return (value & comp) > 0; }
 	bool MatchesQualities(uint8_t comp, uint8_t mask);
-	bool IsTerrainOfType(TerrainTemplate& t) { return MatchesQualities(t.value, t.mask); }
+	bool IsTerrainOfType(const TerrainTemplate& t) { return MatchesQualities(t.value, t.mask); }
 	bool IsTerraIncognita() { return mask == 0; }
 
 protected:

@@ -1,5 +1,7 @@
 #include "TerrainTemplate.h"
 
+using namespace std;
+
 TerrainTemplate::TerrainTemplate(uint16_t s)
 {
 	mask = (uint8_t)(s & 0xff);
@@ -28,7 +30,7 @@ TerrainTemplate::TerrainTemplate(const TerrainTemplate& t, uint8_t v, uint8_t m)
 
 //------------------------------------------------------------------------------
 
-std::string 
+string 
 TerrainTemplate::BitsToString()
 {
 	bool valueBits[8];
@@ -42,7 +44,7 @@ TerrainTemplate::BitsToString()
 		v = (uint8_t)(v >> 1);
 		m = (uint8_t)(m >> 1);
 	}
-	std::string result;
+	string result;
 	for (int i = 7; i >= 0; i--)
 	{
 		if (valueBits[i])

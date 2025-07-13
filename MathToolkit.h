@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <glm.hpp>
 namespace MathToolkit
 {
 	inline double SignedTriangleArea(double x1, double y1, double x2, double y2, double x3, double y3)
@@ -108,5 +109,26 @@ namespace MathToolkit
 		if (t == 1)
 			return dbdt;
 		return (3 * t * t - 2 * t * t * t) * (dbdt - dadt) + (6 * t - 6 * t * t) * (b - a) + dadt;
+	}
+	inline glm::dvec2 GetIntersectionAsST(glm::dvec2 sA, glm::dvec2 sB, glm::dvec2 dirA, glm::dvec2 dirB)
+	{
+		double lenA = dirA.length();
+		double lenB = dirB.length();
+		dirA /= lenA;
+		dirB /= lenB;
+		//the determinant of the matrix that solves this problem
+		double det = dirB.x * dirA.y - dirA.x * dirB.y;
+		if (det == 0)
+			return glm::dvec2(0, 0);
+
+		//As in Ax=b
+		glm::dvec2 bVec = sB - sA;
+		glm::dvec2 aInvTopVec(-dirB.y, dirB.x);
+		glm::dvec2 aInvBotVec(-dirA.y, dirA.x);
+
+		double s = glm::dot(aInvTopVec, bVec) / det;
+		double t = glm::dot(aInvBotVec, bVec) / det;
+
+		return glm::dvec2(s / lenA, t / lenB);
 	}
 }

@@ -27,22 +27,28 @@
       <Filter>Utilities\Source</Filter>
     </ClCompile>
     <ClCompile Include="SamplePoint.cpp">
-      <Filter>Maps\Source</Filter>
+      <Filter>RegionalData\Source</Filter>
     </ClCompile>
     <ClCompile Include="MeshPoint.cpp">
-      <Filter>Maps\Source</Filter>
+      <Filter>RegionalData\Source</Filter>
     </ClCompile>
     <ClCompile Include="MeshConnection.cpp">
-      <Filter>Maps\Source</Filter>
+      <Filter>RegionalData\Source</Filter>
     </ClCompile>
     <ClCompile Include="MeshMidPoint.cpp">
-      <Filter>Maps\Source</Filter>
+      <Filter>RegionalData\Source</Filter>
     </ClCompile>
     <ClCompile Include="TerrainTemplate.cpp">
       <Filter>Utilities\Source</Filter>
     </ClCompile>
     <ClCompile Include="TerrainType.cpp">
       <Filter>Utilities\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="RegionalMap.cpp">
+      <Filter>RegionalData\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="VoronoiAlgorithms.cpp">
+      <Filter>Algorithms\Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -83,16 +89,16 @@
       <Filter>Utilities\Headers</Filter>
     </ClInclude>
     <ClInclude Include="SamplePoint.h">
-      <Filter>Maps\Headers</Filter>
+      <Filter>RegionalData\Headers</Filter>
     </ClInclude>
     <ClInclude Include="MeshPoint.h">
-      <Filter>Maps\Headers</Filter>
+      <Filter>RegionalData\Headers</Filter>
     </ClInclude>
     <ClInclude Include="MeshConnection.h">
-      <Filter>Maps\Headers</Filter>
+      <Filter>RegionalData\Headers</Filter>
     </ClInclude>
     <ClInclude Include="MeshMidPoint.h">
-      <Filter>Maps\Headers</Filter>
+      <Filter>RegionalData\Headers</Filter>
     </ClInclude>
     <ClInclude Include="TerrainTemplate.h">
       <Filter>Utilities\Headers</Filter>
@@ -100,28 +106,19 @@
     <ClInclude Include="TerrainType.h">
       <Filter>Utilities\Headers</Filter>
     </ClInclude>
+    <ClInclude Include="RegionalMap.h">
+      <Filter>RegionalData\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="GlobalRand.h">
+      <Filter>Utilities\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="VoronoiAlgorithms.h">
+      <Filter>Algorithms\Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
       <UniqueIdentifier>{7153d13d-b113-4a83-b6f9-cc467bd1eec5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Maps">
-      <UniqueIdentifier>{f0d4334c-c792-4cf1-9d68-02907a6104df}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Maps\Headers">
-      <UniqueIdentifier>{03770ef0-34d2-46bb-8529-f6725f48c495}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Maps\Source">
-      <UniqueIdentifier>{f21cd1b2-3f5c-49e1-b3e5-5b13c90d0706}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="DataBuffers">
-      <UniqueIdentifier>{7d59837b-3469-4ee7-bdc8-5f8e09c69340}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="DataBuffers\Headers">
-      <UniqueIdentifier>{257d1556-6d66-42d3-8f8e-1cc7d34666fa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="DataBuffers\Source">
-      <UniqueIdentifier>{c8e4ab65-4ecd-42d1-8c6b-aafb87f2fd44}</UniqueIdentifier>
     </Filter>
     <Filter Include="Utilities">
       <UniqueIdentifier>{03a4424a-aa7e-4ed2-9a52-14d2537ae93e}</UniqueIdentifier>
@@ -131,6 +128,33 @@
     </Filter>
     <Filter Include="Utilities\Source">
       <UniqueIdentifier>{8dd24e83-0a5c-42c4-8420-1624982ef753}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RegionalData">
+      <UniqueIdentifier>{f0d4334c-c792-4cf1-9d68-02907a6104df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RegionalData\Headers">
+      <UniqueIdentifier>{03770ef0-34d2-46bb-8529-f6725f48c495}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RegionalData\Source">
+      <UniqueIdentifier>{f21cd1b2-3f5c-49e1-b3e5-5b13c90d0706}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="LocalData">
+      <UniqueIdentifier>{7d59837b-3469-4ee7-bdc8-5f8e09c69340}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="LocalData\Headers">
+      <UniqueIdentifier>{257d1556-6d66-42d3-8f8e-1cc7d34666fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="LocalData\Source">
+      <UniqueIdentifier>{c8e4ab65-4ecd-42d1-8c6b-aafb87f2fd44}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Algorithms">
+      <UniqueIdentifier>{526ec2b6-fd41-4a87-9f76-20b6354213de}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Algorithms\Headers">
+      <UniqueIdentifier>{125afcf2-c5ae-445e-b694-0f834325f2c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Algorithms\Source">
+      <UniqueIdentifier>{5727ef9f-4c76-4fae-aeb4-eb29f3733987}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

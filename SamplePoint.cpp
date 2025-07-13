@@ -1,18 +1,31 @@
 #include "SamplePoint.h"
+#include "GlobalRand.h"
+#include "Perlin.h"
+#include "MeshConnection.h"
+
+using namespace std;
 
 
-public SamplePoint(double x, double y, RegionalMap parent)
+SamplePoint::SamplePoint(double x, double y, RegionalMap* parent) : 
+	MeshPoint(x, y), paintMyColor(false), parent(parent), riverFlow(0), 
+	riverOutlet(nullptr), maxGrade(0), tectonicUpliftOverride(0)
 {
-	super(x, y);
-	int r = (int)(Math.random() * 256);
-	int g = (int)(Math.random() * 256);
-	int b = (int)(Math.random() * 256);
-	myColor = new Color(r, g, b);
-	type = new TerrainType();
-	this.parent = parent;
+	float r = Rand::Float();
+	float g = Rand::Float();
+	float b = Rand::Float();
+	myColor = glm::vec3(r, g, b);
 	Init();
 }
-public SamplePoint(DataInputStream dis, RegionalMap parent)
+
+void 
+SamplePoint::Init()
+{
+	paintMyColor = false;
+	maxGrade = 0;
+	ResetRiver();
+	ResetTectonicUplift();
+}
+/*public SamplePoint(DataInputStream dis, RegionalMap parent)
 {
 	super(dis);
 	try
@@ -38,13 +51,6 @@ public SamplePoint(Iterator<String> tokenStream, RegionalMap parent)
 	myColor = new Color(rgb);
 	this.parent = parent;
 	Init();
-}
-private void Init()
-{
-	paintMyColor = false;
-	maxGrade = 0;
-	ResetRiver();
-	ResetTectonicUplift();
 }
 public void SetAdjacenciesFromDescription(String desc, WorldMap wm)
 {
@@ -174,195 +180,187 @@ public String GetDescription()
 	desc += Short.toString(type.BitsToShort()) + " ";
 	desc += Integer.toString(myColor.getRGB());
 	return desc;
-}
-public boolean RidgeAssigned()
+}*/
+
+bool 
+SamplePoint::RidgeAssigned()
 {
-	for (MeshPoint p : GetAdjacent())
-	{
-		MeshConnection m = GetConnection(p);
-		if (m.IsRidgeline())
-			return true;
-	}
-	return false;
+	bool result = false;
+	ForEachAdjacent([this, &result](MeshPoint* p) {
+		MeshConnection* m = GetConnection(p);
+		if (m->IsRidgeline())
+			result = true;
+	});
+	return result;
 }
-public ArrayList<SamplePoint> GetRiverInlets()
+
+bool
+SamplePoint::SetRiverOutlet(SamplePoint* p)
 {
-	return riverInlets;
-}
-public SamplePoint GetRiverOutlet()
-{
-	return riverOutlet;
-}
-public boolean RiverFlowProcessed()
-{
-	return riverOutlet != null;
-}
-public boolean SetRiverOutlet(SamplePoint p)
-{
-	MeshConnection m = GetConnection(p);
-	if (m == null)
+	MeshConnection* m = GetConnection(p);
+	if (m == nullptr)
 		return false;
-	if (riverOutlet != null)
+	if (riverOutlet != nullptr)
 	{
-		MeshConnection res = GetConnection(riverOutlet);
-		if (res == null)
+		MeshConnection* res = GetConnection(riverOutlet);
+		if (res == nullptr)
 			return false;
-		res.ResetRiver();
+		res->ResetRiver();
 	}
-	m.SetRiver();
+	m->SetRiver();
 	riverOutlet = p;
-	p.riverInlets.add(this);
-
-
+	p->riverInlets.push_back(this);
 	return true;
 }
-public void SendFlowToOutlet()
+void
+SamplePoint::SendFlowToOutlet()
 {
-	if (riverOutlet != null)
-		riverOutlet.riverFlow += riverFlow;
+	if (riverOutlet != nullptr)
+		riverOutlet->riverFlow += riverFlow;
 }
-public ArrayList<SamplePoint> GrabAdjacentUnassignedRiverFlows(boolean sendRiverFlow)
+vector<SamplePoint*>
+SamplePoint::GrabAdjacentUnassignedRiverFlows(bool sendRiverFlow)
 {
-	ArrayList<SamplePoint> grabbed = new ArrayList<SamplePoint>();
-	for (SamplePoint a : GetAdjacentSamples())
+	vector<SamplePoint*> grabbed;
+	for (SamplePoint* a : GetAdjacentSamples())
 	{
-		if (a.GetElevation() != GetElevation())
+		if (a->GetElevation() != GetElevation())
 			continue;
-		if (a.riverOutlet != null)
+		if (a->riverOutlet != nullptr)
 			continue;
 
-		a.SetRiverOutlet(this);
-		grabbed.add(a);
+		a->SetRiverOutlet(this);
+		grabbed.push_back(a);
 		if (sendRiverFlow)
-			a.SendFlowToOutlet();
+			a->SendFlowToOutlet();
 	}
-
 	return grabbed;
 }
-public SamplePoint GetWayDownhill(boolean markOutlet, boolean sendRiverFlow)
+SamplePoint* 
+SamplePoint::GetWayDownhill(bool markOutlet, bool sendRiverFlow)
 {
 	double maxDelta = -1;
-	SamplePoint lowest = null;
-	for (SamplePoint p : GetAdjacentSamples())
+	SamplePoint* lowest = nullptr;
+	for (SamplePoint* p : GetAdjacentSamples())
 	{
-		double delta = GetElevation() - p.GetElevation();
+		double delta = GetElevation() - p->GetElevation();
 		if (delta > 0 && delta > maxDelta)
 		{
 			lowest = p;
 			maxDelta = delta;
 		}
 	}
-	if (markOutlet && lowest != null)
+	if (markOutlet && lowest != nullptr)
 	{
 		SetRiverOutlet(lowest);
 		if (sendRiverFlow)
-			lowest.riverFlow += riverFlow;
+			lowest->riverFlow += riverFlow;
 	}
 	return lowest;
 }
-public void ResetRiver()
+void 
+SamplePoint::ResetRiver()
 {
 	riverFlow = 1;
-	if (riverOutlet != null)
+	if (riverOutlet != nullptr)
 	{
-		MeshConnection m = GetConnection(riverOutlet);
-		if (m != null)
-			m.ResetRiver();
+		MeshConnection* m = GetConnection(riverOutlet);
+		if (m != nullptr)
+			m->ResetRiver();
 	}
-	riverOutlet = null;
-	riverInlets = new ArrayList<SamplePoint>();
+	riverOutlet = nullptr;
+	riverInlets.clear();
 }
-public double GetRiverFlow()
+
+void 
+SamplePoint::SendRiverFlow()
 {
-	return riverFlow;
-}
-public void ForceSetRiverFlow(double flow)
-{
-	riverFlow = flow;
-}
-public void SendRiverFlow()
-{
-	SamplePoint lowest = GetWayDownhill(true, true);
-	if (lowest == null)
+	SamplePoint* lowest = GetWayDownhill(true, true);
+	if (lowest == nullptr)
 	{
-		type.ApplyTerrain(TerrainTemplate.LAKE);
+		type.ApplyTerrain(TerrainTemplate::LAKE);
 	}
 }
-public RegionalMap GetRegionalMap()
-{
-	return parent;
-}
-public boolean NearNorthEdge()
+
+bool 
+SamplePoint::NearNorthEdge()
 {
 	int j = (int)((y - parent.GetWorldY()) * RegionalMap.VORONOI_DIM);
 	return j < 3;
 }
-public boolean NearSouthEdge()
+bool 
+SamplePoint::NearSouthEdge()
 {
 	int j = (int)((y - parent.GetWorldY()) * RegionalMap.VORONOI_DIM);
 	return j >= RegionalMap.VORONOI_DIM - 3;
 }
-public boolean NearWestEdge()
+bool 
+SamplePoint::NearWestEdge()
 {
 	int i = (int)((x - parent.GetWorldX()) * RegionalMap.VORONOI_DIM);
 	return i < 3;
 }
-public boolean NearEastEdge()
+bool 
+SamplePoint::NearEastEdge()
 {
 	int i = (int)((x - parent.GetWorldX()) * RegionalMap.VORONOI_DIM);
 	return i >= RegionalMap.VORONOI_DIM - 3;
 }
-public void CalculateAdjacencies()
+
+void 
+SamplePoint::CalculateAdjacencies()
 {
 	//10 seems sufficient to find all adjacencies, but it occasionally messes up
 	//the circumcenter check on real adjacencies. Boosting to 15 seems sufficient
 	//to make that check effectively perfect
-	ArrayList<SamplePoint> adj = parent.GetNearestN(x, y, 15);
-	for (SamplePoint vp : adj)
+	const vector<SamplePoint*> adj = parent.GetNearestN(x, y, 15);
+	for (SamplePoint* vp : adj)
 	{
-		double dist = Math.sqrt((vp.x - x) * (vp.x - x) + (vp.y - y) * (vp.y - y));
+		double dist = sqrt((vp->x - x) * (vp->x - x) + (vp->y - y) * (vp->y - y));
 		dist /= 2;
 
-		double mx = (vp.x + x) / 2;
-		double my = (vp.y + y) / 2;
+		double mx = (vp->x + x) / 2;
+		double my = (vp->y + y) / 2;
 
-		ArrayList<SamplePoint> objectors = new ArrayList<SamplePoint>();
+		vector<SamplePoint*> objectors;
 		for (int i = 0; i < adj.size(); i++)
 		{
-			SamplePoint a = adj.get(i);
+			SamplePoint* a = adj[i];
 			if (a == vp)
 				continue;
-			double compDist = Math.sqrt((a.x - mx) * (a.x - mx) + (a.y - my) * (a.y - my));
+			double compDist = sqrt((a->x - mx) * (a->x - mx) + (a->y - my) * (a->y - my));
 			if (compDist < dist)
-			{
-				objectors.add(a);
-			}
+				objectors.push_back(a);
 		}
-		if (objectors.isEmpty())
+		if (objectors.empty())
 		{
 			MarkAdjacent(vp);
 			continue;
 		}
-		boolean objection = false;
-		for (SamplePoint b : objectors)
+		bool objection = false;
+		for (SamplePoint* b : objectors)
 		{
 			//now we need to find the circumcenter of this, vp, and b; I'm taking this calc from Wikipedia
-			double D = 2 * (x * (vp.y - b.y) + vp.x * (b.y - y) + b.x * (y - vp.y));
-			double ccx = ((x * x + y * y) * (vp.y - b.y) + (vp.x * vp.x + vp.y * vp.y) * (b.y - y) + (b.x * b.x + b.y * b.y) * (y - vp.y)) / D;
-			double ccy = ((x * x + y * y) * (b.x - vp.x) + (vp.x * vp.x + vp.y * vp.y) * (x - b.x) + (b.x * b.x + b.y * b.y) * (vp.x - x)) / D;
+			double D = 2 * (x * (vp->y - b->y) + vp->x * (b->y - y) + b->x * (y - vp->y));
+			double ccx = ((x * x + y * y) * (vp->y - b->y) + 
+				(vp->x * vp->x + vp->y * vp->y) * (b->y - y) + 
+				(b->x * b->x + b->y * b->y) * (y - vp->y)) / D;
+			double ccy = ((x * x + y * y) * (b->x - vp->x) + 
+				(vp->x * vp->x + vp->y * vp->y) * (x - b->x) + 
+				(b->x * b->x + b->y * b->y) * (vp->x - x)) / D;
 
-			double ccr = Math.sqrt((x - ccx) * (x - ccx) + (y - ccy) * (y - ccy));
+			double ccr = sqrt((x - ccx) * (x - ccx) + (y - ccy) * (y - ccy));
 			//double ccr2 = Math.sqrt((vp.x - ccx) * (vp.x - ccx) + (vp.y - ccy) * (vp.y - ccy));
 			//double ccr3 = Math.sqrt((b.x - ccx) * (b.x - ccx) + (b.y - ccy) * (b.y - ccy));
 
 			for (int i = 0; i < adj.size(); i++)
 			{
-				SamplePoint a = adj.get(i);
+				SamplePoint* a = adj[i];
 				if (a == vp)
 					continue;
 				if (a == b)
 					continue;
-				double compDist = Math.sqrt((a.x - ccx) * (a.x - ccx) + (a.y - ccy) * (a.y - ccy));
+				double compDist = sqrt((a->x - ccx) * (a->x - ccx) + (a->y - ccy) * (a->y - ccy));
 				if (compDist < ccr)
 				{
 					objection = true;
@@ -377,36 +375,36 @@ public void CalculateAdjacencies()
 		}
 	}
 }
-public ArrayList<SamplePoint> GetAdjacentSamples()
+
+vector<SamplePoint*> 
+SamplePoint::GetAdjacentSamples()
 {
-	ArrayList<SamplePoint> samples = new ArrayList<SamplePoint>();
-	for (MeshPoint adj : GetAdjacent())
-	{
-		if (adj instanceof SamplePoint)
-			samples.add((SamplePoint)adj);
-	}
+	vector<SamplePoint*> samples;
+	ForEachAdjacent([&samples](MeshPoint* a) {
+		SamplePoint* s = dynamic_cast<SamplePoint*>(a);
+		if (s != nullptr)
+			samples.push_back(s);
+	});
 	return samples;
 }
-public void MakeLake()
+void 
+SamplePoint::MakeLake()
 {
-	if (type.IsTerrainOfType(TerrainTemplate.OCEAN))
-		type = new TerrainType(TerrainTemplate.FLAT);
-	type.ApplyTerrain(TerrainTemplate.LAKE);
+	if (type.IsTerrainOfType(TerrainTemplate::OCEAN))
+		type = TerrainType(TerrainTemplate::FLAT);
+	type.ApplyTerrain(TerrainTemplate::LAKE);
 }
-public void MakeOcean()
+void 
+SamplePoint::MakeOcean()
 {
 	SetElevation(0);
-	type = new TerrainType(TerrainTemplate.OCEAN);
+	type = TerrainType(TerrainTemplate::OCEAN);
 }
 
-@Override
-public double GetMaxGrade()
+void 
+SamplePoint::AssignMaxGrade(double min, double max)
 {
-	return maxGrade;
-}
-private void AssignMaxGrade(double min, double max)
-{
-	double perlinPush = Perlin.minMaxSelector.Get(x, y);
+	double perlinPush = Perlin::minMaxSelector.Get(x, y);
 	perlinPush += 1;
 	perlinPush /= 2;
 	if (perlinPush < 0)
@@ -416,59 +414,66 @@ private void AssignMaxGrade(double min, double max)
 	double grade = perlinPush * max + (1 - perlinPush) * min;
 	maxGrade = grade;
 }
-private void SetPeaks()
+void 
+SamplePoint::SetPeaks()
 {
-	type = new TerrainType(TerrainTemplate.PEAKS);
+	type = TerrainType(TerrainTemplate::PEAKS);
 	AssignMaxGrade(.5, .940);
 }
-private void SetMountains()
+void 
+SamplePoint::SetMountains()
 {
-	type = new TerrainType(TerrainTemplate.MOUNTAINS);
+	type = TerrainType(TerrainTemplate::MOUNTAINS);
 	AssignMaxGrade(.342, .866);
 }
-private void SetOcean()
+void 
+SamplePoint::SetOcean()
 {
-	type = new TerrainType(TerrainTemplate.OCEAN);
+	type = TerrainType(TerrainTemplate::OCEAN);
 	SetElevation(0);
 	AssignMaxGrade(0, 0);
 }
-private void SetHills()
+void 
+SamplePoint::SetHills()
 {
-	type = new TerrainType(TerrainTemplate.HILLS);
+	type = TerrainType(TerrainTemplate::HILLS);
 	AssignMaxGrade(.174, .5);
 }
-private void SetLakes()
+void 
+SamplePoint::SetLakes()
 {
-	type = new TerrainType(TerrainTemplate.FLAT);
-	type.ApplyTerrain(TerrainTemplate.LAKE);
+	type = TerrainType(TerrainTemplate::FLAT);
+	type.ApplyTerrain(TerrainTemplate::LAKE);
 	AssignMaxGrade(0, 0);
 }
-private void SetFlats()
+void 
+SamplePoint::SetFlats()
 {
-	TerrainType def = new TerrainType(TerrainTemplate.FLAT);
+	TerrainType def = TerrainType(TerrainTemplate::FLAT);
 	AssignMaxGrade(.017, .139);
 	type = def;
 }
-public void AssignVoronoiTerrainType()
+void 
+SamplePoint::AssignVoronoiTerrainType()
 {
-	if (!Perlin.oceans.UnderThreshold(x, y))
+	if (!Perlin::oceans.UnderThreshold(x, y))
 	{
-		if (Perlin.peaks.UnderThreshold(x, y) &&
-			Perlin.peaks.GetPercentBeneathThreshold(x, y) > 0.1 &&
-			Perlin.oceans.GetPercentAboveThreshold(x, y) < 0.1 &&
-			Perlin.peaks.GetPercentBeneathThreshold(x, y) > 2 * Perlin.oceans.GetPercentAboveThreshold(x, y))
+		if (Perlin::peaks.UnderThreshold(x, y) &&
+			Perlin::peaks.GetPercentBeneathThreshold(x, y) > 0.1 &&
+			Perlin::oceans.GetPercentAboveThreshold(x, y) < 0.1 &&
+			Perlin::peaks.GetPercentBeneathThreshold(x, y) > 2 * Perlin::oceans.GetPercentAboveThreshold(x, y))
 		{
-			if (!Perlin.randomLakes.UnderThreshold(x, y))
+			if (!Perlin::randomLakes.UnderThreshold(x, y))
 			{
 				SetOcean();
 				return;
 			}
-			if (!Perlin.randomHills.UnderThreshold(x, y))
+			if (!Perlin::randomHills.UnderThreshold(x, y))
 			{
 				SetOcean();
 				return;
 			}
-			if (Perlin.randomPasses.UnderThreshold(x, y) && Perlin.randomPasses.GetPercentBeneathThreshold(x, y) > 0.1)
+			if (Perlin::randomPasses.UnderThreshold(x, y) && Perlin::randomPasses.GetPercentBeneathThreshold(x, y) > 0.1)
 			{
 				SetHills();
 				return;
@@ -476,22 +481,22 @@ public void AssignVoronoiTerrainType()
 			SetPeaks();
 			return;
 		}
-		if (Perlin.mountains.UnderThreshold(x, y) &&
-			Perlin.mountains.GetPercentBeneathThreshold(x, y) > 0.1 &&
-			Perlin.oceans.GetPercentAboveThreshold(x, y) < 0.15 &&
-			Perlin.mountains.GetPercentBeneathThreshold(x, y) > 2 * Perlin.oceans.GetPercentAboveThreshold(x, y))
+		if (Perlin::mountains.UnderThreshold(x, y) &&
+			Perlin::mountains.GetPercentBeneathThreshold(x, y) > 0.1 &&
+			Perlin::oceans.GetPercentAboveThreshold(x, y) < 0.15 &&
+			Perlin::mountains.GetPercentBeneathThreshold(x, y) > 2 * Perlin::oceans.GetPercentAboveThreshold(x, y))
 		{
-			if (!Perlin.randomLakes.UnderThreshold(x, y))
+			if (!Perlin::randomLakes.UnderThreshold(x, y))
 			{
 				SetOcean();
 				return;
 			}
-			if (!Perlin.randomHills.UnderThreshold(x, y))
+			if (!Perlin::randomHills.UnderThreshold(x, y))
 			{
 				SetOcean();
 				return;
 			}
-			if (Perlin.randomPasses.UnderThreshold(x, y))
+			if (Perlin::randomPasses.UnderThreshold(x, y))
 			{
 				SetHills();
 				return;
@@ -502,9 +507,9 @@ public void AssignVoronoiTerrainType()
 		SetOcean();
 		return;
 	}
-	if (Perlin.peaks.UnderThreshold(x, y))
+	if (Perlin::peaks.UnderThreshold(x, y))
 	{
-		if (!Perlin.randomPasses.UnderThreshold(x, y))
+		if (!Perlin::randomPasses.UnderThreshold(x, y))
 		{
 			SetPeaks();
 			return;
@@ -515,9 +520,9 @@ public void AssignVoronoiTerrainType()
 			return;
 		}
 	}
-	if (Perlin.mountains.UnderThreshold(x, y))
+	if (Perlin::mountains.UnderThreshold(x, y))
 	{
-		if (!Perlin.randomPasses.UnderThreshold(x, y))
+		if (!Perlin::randomPasses.UnderThreshold(x, y))
 		{
 			SetMountains();
 			return;
@@ -528,20 +533,20 @@ public void AssignVoronoiTerrainType()
 			return;
 		}
 	}
-	if (Perlin.foothills.UnderThreshold(x, y) && !Perlin.randomPasses.UnderThreshold(x, y))
+	if (Perlin::foothills.UnderThreshold(x, y) && !Perlin::randomPasses.UnderThreshold(x, y))
 	{
 		SetHills();
 		return;
 	}
-	if (!Perlin.randomLakes.UnderThreshold(x, y))
+	if (!Perlin::randomLakes.UnderThreshold(x, y))
 	{
 		SetLakes();
 		return;
 	}
 
-	if (!Perlin.randomHills.UnderThreshold(x, y)
-		&& Perlin.oceans.GetPercentBeneathThreshold(x, y) > 0.05
-		&& Perlin.randomLakes.GetPercentBeneathThreshold(x, y) > 0.08)
+	if (!Perlin::randomHills.UnderThreshold(x, y)
+		&& Perlin::oceans.GetPercentBeneathThreshold(x, y) > 0.05
+		&& Perlin::randomLakes.GetPercentBeneathThreshold(x, y) > 0.08)
 	{
 		SetHills();
 		return;
@@ -551,74 +556,55 @@ public void AssignVoronoiTerrainType()
 	return;
 }
 
-public static int NumPerlinElevDiffs()
+double 
+SamplePoint::GetBaseSedimentDepth()
 {
-	return 2;
-}
-
-public double GetBaseSedimentDepth()
-{
-	if (type.IsTerrainOfType(TerrainTemplate.PEAKS))
+	if (type.IsTerrainOfType(TerrainTemplate::PEAKS))
 		return 0;
-	else if (type.IsTerrainOfType(TerrainTemplate.MOUNTAINS))
+	else if (type.IsTerrainOfType(TerrainTemplate::MOUNTAINS))
 		return 3;
-	else if (type.IsTerrainOfType(TerrainTemplate.ROUGH))
+	else if (type.IsTerrainOfType(TerrainTemplate::ROUGH))
 		return 12;
 	else
 		return 60;
 }
 
-@Override
-public double[] GetPerlinElevDiffs()
+vector<double> 
+SamplePoint::GetPerlinElevDiffs()
 {
 	if (IsWaterPoint())
-		return new double[] {0, 0};
-	else if (type.IsTerrainOfType(TerrainTemplate.PEAKS))
-		return new double[] {0, 1};
-	else if (type.IsTerrainOfType(TerrainTemplate.MOUNTAINS))
-		return new double[] {0.1, 0.9};
-	else if (type.IsTerrainOfType(TerrainTemplate.HILLS))
-		return new double[] {0.4, 0.6};
+		return vector<double>{0, 0};
+	else if (type.IsTerrainOfType(TerrainTemplate::PEAKS))
+		return vector<double>{0, 1};
+	else if (type.IsTerrainOfType(TerrainTemplate::MOUNTAINS))
+		return vector<double>{0.1, 0.9};
+	else if (type.IsTerrainOfType(TerrainTemplate::HILLS))
+		return vector<double>{0.4, 0.6};
 	else
-		return new double[] {1, 0};
+		return vector<double>{1, 0};
 }
-@Override
-public byte GetDetailLevel() {
-	return 0;
-}
-@Override
-public boolean IsOcean() {
-	return type.IsTerrainOfType(TerrainTemplate.OCEAN);
-}
-@Override
-public boolean IsInlandLake() {
+
+bool
+SamplePoint::IsInlandLake() {
 	if (IsOcean())
 		return false;
-	return type.IsTerrainOfType(TerrainTemplate.LAKE);
+	return type.IsTerrainOfType(TerrainTemplate::LAKE);
 }
-@Override
-public double GetTectonicUplift()
+double 
+SamplePoint::GetTectonicUplift()
 {
 	if (tectonicUpliftOverride != -1)
 		return tectonicUpliftOverride;
 	//Paper uses 5.01 * 10^-4 (ie 0.0001)
-	double adjust = Perlin.upliftAdjust.Get(x, y);
-	if (type.IsTerrainOfType(TerrainTemplate.PEAKS))
+	double adjust = Perlin::upliftAdjust.Get(x, y);
+	if (type.IsTerrainOfType(TerrainTemplate::PEAKS))
 		return (6.01 + 1.5 * adjust) * 0.0001;
-	else if (type.IsTerrainOfType(TerrainTemplate.MOUNTAINS))
+	else if (type.IsTerrainOfType(TerrainTemplate::MOUNTAINS))
 		return (4.52 + 1.5 * adjust) * 0.0001;
-	else if (type.IsTerrainOfType(TerrainTemplate.HILLS))
+	else if (type.IsTerrainOfType(TerrainTemplate::HILLS))
 		return (adjust > 0 ? (1.25 + 2.5 * adjust) : (1.25 + 0.75 * adjust)) * 0.0001;
 	else if (IsOcean())
 		return 0;
 	else
 		return (4.15 + 3.5 * adjust) * 0.00001;
-}
-public void OverrideTectonicUplift(double newUplift)
-{
-	tectonicUpliftOverride = newUplift;
-}
-public void ResetTectonicUplift()
-{
-	tectonicUpliftOverride = -1;
 }

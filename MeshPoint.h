@@ -5,10 +5,12 @@
 #include <shared_mutex>
 #include <limits>
 #include <cmath>
-#include "MeshConnection.h"
+
+class MeshConnection;
 
 class MeshPoint
 {
+	friend class MeshConnection;
 public:
 	MeshPoint(double x, double y) : MeshPoint() 
 	{
@@ -39,7 +41,16 @@ public:
 
 	void ResetAdjacencies();
 	MeshConnection* GetConnection(MeshPoint* adj);
-	const std::unordered_map<MeshPoint*, MeshConnection*>& GetAdjacent() { return adjacent; }
+	
+	template<typename Func>
+	void ForEachAdjacent(Func f) 
+	{ 
+		std::shared_lock lock(adjMutex);
+		for (auto p : adjacent)
+			f(p.first);
+	}
+	bool AdjacentContains(MeshPoint* p);
+	//const std::unordered_map<MeshPoint*, MeshConnection*>& GetAdjacent() { return adjacent; }
 
 	bool ContainerIndexSet() { return containerIndex >= 0; }
 	void ResetContainerIndex() { containerIndex = -1; }

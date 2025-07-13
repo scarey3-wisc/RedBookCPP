@@ -1,11 +1,11 @@
 #pragma once
 #include "MeshMidPoint.h"
 #include "MeshPoint.h"
+#include <optional>
 class MeshConnection
 {
 public:
-	MeshConnection(MeshPoint* first, MeshPoint* second) :
-		a(first), b(second), mid(nullptr), river(false), ridgeline(false){}
+	MeshConnection(MeshPoint* first, MeshPoint* second);
 
 	uint8_t GetLargerDetailLevel();
 	uint8_t GetSmallerDetailLevel();
@@ -23,6 +23,7 @@ public:
 	bool MidInitialized() { return mid != nullptr; }
 	MeshMidPoint* GetMid() { return GetMid(false); }
 	MeshMidPoint* GetMid(bool spawnIfNeeded);
+	MeshMidPoint* GetMidOrTempMid();
 
 
 	MeshPoint* a;
@@ -30,6 +31,7 @@ public:
 
 private:
 	MeshMidPoint* mid;
+	std::optional<MeshMidPoint> temporaryMid;
 	bool ridgeline;
 	bool river;
 

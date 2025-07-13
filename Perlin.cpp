@@ -3,10 +3,12 @@
 #include <numbers>
 #include "MathToolkit.h"
 
+using namespace std;
+
 //------------------------------------------------------------------------------
 
 double 
-Perlin::GetPercentAboveThreshold(double wX, double wY, int octaves)
+Perlin::GetPercentAboveThreshold(double wX, double wY, int octaves) const
 {
 	double val = Get(wX, wY, octaves);
 	val -= threshold;
@@ -21,7 +23,7 @@ Perlin::GetPercentAboveThreshold(double wX, double wY, int octaves)
 //------------------------------------------------------------------------------
 
 double 
-Perlin::GetPercentBeneathThreshold(double wX, double wY, int octaves)
+Perlin::GetPercentBeneathThreshold(double wX, double wY, int octaves) const
 {
 	double val = Get(wX, wY, octaves);
 	val -= threshold;
@@ -36,11 +38,11 @@ Perlin::GetPercentBeneathThreshold(double wX, double wY, int octaves)
 //------------------------------------------------------------------------------
 
 double 
-Perlin::GetPercentAboveThreshold(double wX, double wY)
+Perlin::GetPercentAboveThreshold(double wX, double wY) const
 {
 	double val = Get(wX, wY);
 	if (absThreshold)
-		val = std::abs(val);
+		val = abs(val);
 	val -= threshold;
 	val /= (1 - threshold);
 	if (val > 1)
@@ -53,12 +55,12 @@ Perlin::GetPercentAboveThreshold(double wX, double wY)
 //------------------------------------------------------------------------------
 
 double
-Perlin::GetPercentBeneathThreshold(double wX, double wY)
+Perlin::GetPercentBeneathThreshold(double wX, double wY) const
 {
 	double val = Get(wX, wY);
 	if (absThreshold)
 	{
-		val = std::abs(val);
+		val = abs(val);
 		val /= (threshold);
 		val = 1 - val;
 		if (val > 1)
@@ -84,7 +86,7 @@ Perlin::GetPercentBeneathThreshold(double wX, double wY)
 //------------------------------------------------------------------------------
 
 bool 
-Perlin::UnderThreshold(double wX, double wY)
+Perlin::UnderThreshold(double wX, double wY) const
 {
 	if (!thresholdSet)
 		return true;
@@ -107,7 +109,7 @@ Perlin::UnderThreshold(double wX, double wY)
 		{
 			if (absThreshold)
 			{
-				if (std::abs(result) + maxDelta < modThreshold)
+				if (abs(result) + maxDelta < modThreshold)
 				{
 					return true;
 				}
@@ -122,7 +124,7 @@ Perlin::UnderThreshold(double wX, double wY)
 		}
 	}
 	if (absThreshold)
-		result = std::abs(result);
+		result = abs(result);
 
 	return result < modThreshold;
 }
@@ -130,7 +132,7 @@ Perlin::UnderThreshold(double wX, double wY)
 //------------------------------------------------------------------------------
 
 double 
-Perlin::Get(double wX, double wY, int octaves)
+Perlin::Get(double wX, double wY, int octaves) const
 {
 	double res = GetNoise(offset + wX * scale, offset + wY * scale, octaves, octaveScale);
 	res *= NORM_SCALE;
@@ -150,7 +152,7 @@ Perlin::Get(double wX, double wY, int octaves)
 //------------------------------------------------------------------------------
 
 double
-Perlin::Get(double wX, double wY)
+Perlin::Get(double wX, double wY) const
 {
 	return Get(wX, wY, octaves);
 }
@@ -158,7 +160,7 @@ Perlin::Get(double wX, double wY)
 //------------------------------------------------------------------------------
 
 glm::dvec2 
-Perlin::GetGradient(double wX, double wY)
+Perlin::GetGradient(double wX, double wY) const
 {
 	glm::dvec2 res = GetNoiseGradient(offset + wX * scale, offset + wY * scale, octaves, octaveScale);
 	res *= scale;
@@ -180,7 +182,7 @@ Perlin::GetGradient(double wX, double wY)
 //------------------------------------------------------------------------------
 
 double
-Perlin::GetMaxValue()
+Perlin::GetMaxValue() const
 {
 	double r = 1 / octaveScale;
 	return 1 / (1 - r);
@@ -189,7 +191,7 @@ Perlin::GetMaxValue()
 //------------------------------------------------------------------------------
 
 double 
-Perlin::GetNoise(double x, double y, int octaves, double scaling)
+Perlin::GetNoise(double x, double y, int octaves, double scaling) const
 {
 	double result = 0;
 	double cM = 1;
@@ -206,7 +208,7 @@ Perlin::GetNoise(double x, double y, int octaves, double scaling)
 //------------------------------------------------------------------------------
 
 glm::dvec2 
-Perlin::GetNoiseGradient(double x, double y, int octaves, double scaling)
+Perlin::GetNoiseGradient(double x, double y, int octaves, double scaling) const
 {
 	glm::dvec2 result(0, 0);
 	double cM = 1;
@@ -227,7 +229,7 @@ Perlin::GetNoiseGradient(double x, double y, int octaves, double scaling)
 //------------------------------------------------------------------------------
 
 glm::dvec2
-Perlin::PerlinGradient(double x, double y)
+Perlin::PerlinGradient(double x, double y) const
 {
 	int x0 = (int)x;
 	int x1 = x0 + 1;
@@ -267,7 +269,7 @@ Perlin::PerlinGradient(double x, double y)
 //------------------------------------------------------------------------------
 
 double
-Perlin::PerlinCalc(double x, double y)
+Perlin::PerlinCalc(double x, double y) const
 {
 	int x0 = (int)x;
 	int x1 = x0 + 1;
@@ -294,7 +296,7 @@ Perlin::PerlinCalc(double x, double y)
 //------------------------------------------------------------------------------
 
 double 
-Perlin::DotGridGradientForPerlin(int ix, int iy, double x, double y)
+Perlin::DotGridGradientForPerlin(int ix, int iy, double x, double y) const
 {
 	double gx = 0, gy = 0;
 	uint32_t lx = (uint32_t) x, ly = (uint32_t) iy;
@@ -302,15 +304,15 @@ Perlin::DotGridGradientForPerlin(int ix, int iy, double x, double y)
 	ly += 0x80000000;
 	//lx = ix < 0 ? Integer.MAX_VALUE + ix : ix;
 	//ly = iy < 0 ? Integer.MAX_VALUE + iy : iy;
-	std::minstd_rand randOne(0xffffffff - lx);
-	std::minstd_rand randTwo(ly);
+	minstd_rand randOne(0xffffffff - lx);
+	minstd_rand randTwo(ly);
 	uint32_t realSeed = randOne() ^ randTwo() ^ seed;
 
-	std::minstd_rand newRand(realSeed);
-	std::uniform_real_distribution dist(0.0, 1.0);
-	double theta = 2 * std::numbers::pi * dist(newRand);
-	gx = (double) std::sin(theta);
-	gy = (double) std::cos(theta);
+	minstd_rand newRand(realSeed);
+	uniform_real_distribution dist(0.0, 1.0);
+	double theta = 2 * numbers::pi * dist(newRand);
+	gx = (double) sin(theta);
+	gy = (double) cos(theta);
 	double dx = x - ix;
 	double dy = y - iy;
 	return gx * dx + gy * dy;
@@ -319,7 +321,7 @@ Perlin::DotGridGradientForPerlin(int ix, int iy, double x, double y)
 //------------------------------------------------------------------------------
 
 glm::dvec2
-Perlin::GradDotGridGradientForPerlin(int ix, int iy, double x, double y)
+Perlin::GradDotGridGradientForPerlin(int ix, int iy, double x, double y) const
 {
 	double gx = 0, gy = 0;
 	uint32_t lx = (uint32_t)x, ly = (uint32_t)iy;
@@ -327,15 +329,15 @@ Perlin::GradDotGridGradientForPerlin(int ix, int iy, double x, double y)
 	ly += 0x80000000;
 	//lx = ix < 0 ? Integer.MAX_VALUE + ix : ix;
 	//ly = iy < 0 ? Integer.MAX_VALUE + iy : iy;
-	std::minstd_rand randOne(0xffffffff - lx);
-	std::minstd_rand randTwo(ly);
+	minstd_rand randOne(0xffffffff - lx);
+	minstd_rand randTwo(ly);
 	uint32_t realSeed = randOne() ^ randTwo() ^ seed;
 
-	std::minstd_rand newRand(realSeed);
-	std::uniform_real_distribution dist(0.0, 1.0);
-	double theta = 2 * std::numbers::pi * dist(newRand);
-	gx = (double) std::sin(theta);
-	gy = (double) std::cos(theta);
+	minstd_rand newRand(realSeed);
+	uniform_real_distribution dist(0.0, 1.0);
+	double theta = 2 * numbers::pi * dist(newRand);
+	gx = (double) sin(theta);
+	gy = (double) cos(theta);
 	return glm::dvec2(gx, gy);
 }
 

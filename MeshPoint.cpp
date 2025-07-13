@@ -1,5 +1,8 @@
 #include "MeshPoint.h"
+#include "MeshConnection.h"
 #include <algorithm>
+
+using namespace std;
 
 /*public MeshPoint(DataInputStream dis)
 {
@@ -70,6 +73,7 @@ void
 MeshPoint::InitDirectlyAdjacent()
 {
 	ResetDirectlyAdjacent();
+	shared_lock lock(adjMutex);
 	for (auto p : adjacent)
 	{
 
@@ -144,17 +148,19 @@ void
 MeshPoint::CalculatePersonalDrainageArea()
 {
 	personalDrainageArea = 0;
-	std::vector<MeshPoint*> directlyAdjacent;
+	vector<MeshPoint*> directlyAdjacent;
+	shared_lock lock(adjMutex);
 	for (auto p : adjacent)
 	{
 		MeshPoint* dir = GetClosestDirectAdjacency(p.first);
 		if (dir != nullptr)
 			directlyAdjacent.push_back(dir);
 	}
-	std::sort(directlyAdjacent.begin(), directlyAdjacent.end(),
+	lock.unlock();
+	sort(directlyAdjacent.begin(), directlyAdjacent.end(),
 		[this](const MeshPoint*& o1, const MeshPoint*& o2) {
-			double theta1 = std::atan2(o1->x - x, o1->y - y);
-			double theta2 = std::atan2(o2->x - x, o2->y - y);
+			double theta1 = atan2(o1->x - x, o1->y - y);
+			double theta2 = atan2(o2->x - x, o2->y - y);
 			if (theta1 < theta2)
 				return -1;
 			if (theta1 > theta2)
@@ -173,7 +179,7 @@ MeshPoint::CalculatePersonalDrainageArea()
 bool 
 MeshPoint::HasZeroElevDiffs()
 {
-	std::vector<double> perlinElevDiffs = GetPerlinElevDiffs();
+	vector<double> perlinElevDiffs = GetPerlinElevDiffs();
 	for (int i = 0; i < perlinElevDiffs.size(); i++)
 	{
 		if (perlinElevDiffs[i] != 0)
@@ -182,13 +188,22 @@ MeshPoint::HasZeroElevDiffs()
 	return true;
 }
 
+bool 
+MeshPoint::AdjacentContains(MeshPoint* p)
+{
+	shared_lock lock(adjMutex);
+	return adjacent.find(p) != adjacent.end();
+}
+
+
 void 
 MeshPoint::ResetAdjacencies()
 {
+	unique_lock lock(adjMutex);
 	for (auto e : adjacent)
 	{
 		if (e.second->MidInitialized())
-			e.second->GetMid().ResetAdjacencies();
+			e.second->GetMid()->ResetAdjacencies();
 		e.first->adjacent.erase(this);
 	}
 	adjacent.clear();
@@ -197,12 +212,14 @@ MeshPoint::ResetAdjacencies()
 void 
 MeshPoint::ForceRemoveAdjacency(MeshPoint* target)
 {
+	unique_lock lock(adjMutex);
 	adjacent.erase(target);
 }
 
 void 
 MeshPoint::ForceOneWayAdjacency(MeshPoint* target)
 {
+	unique_lock lock(adjMutex);
 	MeshConnection* con = new MeshConnection(this, target);
 	adjacent[target] = con;
 }
@@ -210,6 +227,7 @@ MeshPoint::ForceOneWayAdjacency(MeshPoint* target)
 void 
 MeshPoint::MarkAdjacent(MeshPoint* p)
 {
+	unique_lock lock(adjMutex);
 	if (adjacent.find(p) != adjacent.end() && p->adjacent.find(this) != p->adjacent.end())
 		return;
 	if (p->adjacent.find(this) != p->adjacent.end())
@@ -224,6 +242,7 @@ MeshPoint::MarkAdjacent(MeshPoint* p)
 MeshConnection*
 MeshPoint::GetConnection(MeshPoint* adj)
 {
+	shared_lock lock(adjMutex);
 	if (adjacent.find(adj) == adjacent.end())
 		return nullptr;
 	return adjacent[adj];
@@ -237,13 +256,13 @@ MeshPoint::GetConnection(MeshPoint* adj)
 MeshPoint* 
 MeshPoint::GetClosestDirectAdjacency(MeshPoint* adj)
 {
-	MeshConnection con = GetConnection(adj);
-	if (con.GetMid() == null)
+	MeshConnection* con = GetConnection(adj);
+	if (con->GetMid() == nullptr)
 		return adj;
-	while (con.GetMid() != null)
+	while (con->GetMid() != nullptr)
 	{
-		adj = con.GetMid();
-		con = adj.GetConnection(this);
+		adj = con->GetMid();
+		con = adj->GetConnection(this);
 	}
 	return adj;
 }

@@ -149,15 +149,18 @@
     <ClInclude Include="external\imgui\imstb_rectpack.h" />
     <ClInclude Include="external\imgui\imstb_textedit.h" />
     <ClInclude Include="external\imgui\imstb_truetype.h" />
+    <ClInclude Include="GlobalRand.h" />
     <ClInclude Include="MathToolkit.h" />
     <ClInclude Include="MeshConnection.h" />
     <ClInclude Include="MeshMidPoint.h" />
     <ClInclude Include="MeshPoint.h" />
     <ClInclude Include="Perlin.h" />
+    <ClInclude Include="RegionalMap.h" />
     <ClInclude Include="SamplePoint.h" />
     <ClInclude Include="Switches.h" />
     <ClInclude Include="TerrainTemplate.h" />
     <ClInclude Include="TerrainType.h" />
+    <ClInclude Include="VoronoiAlgorithms.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp" />
@@ -172,9 +175,11 @@
     <ClCompile Include="MeshPoint.cpp" />
     <ClCompile Include="Perlin.cpp" />
     <ClCompile Include="RedBook.cpp" />
+    <ClCompile Include="RegionalMap.cpp" />
     <ClCompile Include="SamplePoint.cpp" />
     <ClCompile Include="TerrainTemplate.cpp" />
     <ClCompile Include="TerrainType.cpp" />
+    <ClCompile Include="VoronoiAlgorithms.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -26,24 +26,24 @@ public:
 		GenerateSeed();
 	}
 
-	double GetPercentAboveThreshold(double wX, double wY, int octaves);
-	double GetPercentBeneathThreshold(double wX, double wY, int octaves);
-	double GetPercentAboveThreshold(double wX, double wY);
-	double GetPercentBeneathThreshold(double wX, double wY);
-	bool UnderThreshold(double wX, double wY);
-	double Get(double wX, double wY);
-	glm::dvec2 GetGradient(double wX, double wY);
+	double GetPercentAboveThreshold(double wX, double wY, int octaves) const;
+	double GetPercentBeneathThreshold(double wX, double wY, int octaves) const;
+	double GetPercentAboveThreshold(double wX, double wY) const;
+	double GetPercentBeneathThreshold(double wX, double wY) const;
+	bool UnderThreshold(double wX, double wY) const;
+	double Get(double wX, double wY)const;
+	glm::dvec2 GetGradient(double wX, double wY) const;
 
 private:
 
-	double Get(double wX, double wY, int octaves);
-	double GetMaxValue();
-	double GetNoise(double x, double y, int octaves, double scaling);
-	glm::dvec2 GetNoiseGradient(double x, double y, int octaves, double scaling);
-	glm::dvec2 PerlinGradient(double x, double y);
-	double PerlinCalc(double x, double y);
-	double DotGridGradientForPerlin(int ix, int iy, double x, double y);
-	glm::dvec2 GradDotGridGradientForPerlin(int ix, int iy, double x, double y);
+	double Get(double wX, double wY, int octaves) const;
+	double GetMaxValue() const;
+	double GetNoise(double x, double y, int octaves, double scaling) const;
+	glm::dvec2 GetNoiseGradient(double x, double y, int octaves, double scaling) const;
+	glm::dvec2 PerlinGradient(double x, double y) const;
+	double PerlinCalc(double x, double y) const;
+	double DotGridGradientForPerlin(int ix, int iy, double x, double y) const;
+	glm::dvec2 GradDotGridGradientForPerlin(int ix, int iy, double x, double y) const;
 
 
 	void GenerateSeed()
@@ -86,6 +86,7 @@ public:
 	static const Perlin mountainHeightDelta;
 	static const Perlin plainsHeightDelta;
 	static const Perlin elevDeltas[2];
+	static const int elevDeltaLength = 2;
 
 	static bool SaveSeeds(FILE* wr);
 	static bool LoadSeeds(FILE* rd);
