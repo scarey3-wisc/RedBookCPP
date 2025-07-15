@@ -50,6 +50,9 @@
     <ClCompile Include="VoronoiAlgorithms.cpp">
       <Filter>Algorithms\Source</Filter>
     </ClCompile>
+    <ClCompile Include="LocalMap.cpp">
+      <Filter>LocalData\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\imgui\imconfig.h">
@@ -114,6 +117,12 @@
     </ClInclude>
     <ClInclude Include="VoronoiAlgorithms.h">
       <Filter>Algorithms\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WatermapValue.h">
+      <Filter>LocalData\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="LocalMap.h">
+      <Filter>LocalData\Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

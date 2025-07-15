@@ -2,6 +2,7 @@
 #include "GlobalRand.h"
 #include "Perlin.h"
 #include "MeshConnection.h"
+#include "RegionalMap.h"
 
 using namespace std;
 
@@ -285,26 +286,26 @@ SamplePoint::SendRiverFlow()
 bool 
 SamplePoint::NearNorthEdge()
 {
-	int j = (int)((y - parent.GetWorldY()) * RegionalMap.VORONOI_DIM);
+	int j = (int)((y - parent->GetWorldY()) * RegionalMap::VORONOI_DIM);
 	return j < 3;
 }
 bool 
 SamplePoint::NearSouthEdge()
 {
-	int j = (int)((y - parent.GetWorldY()) * RegionalMap.VORONOI_DIM);
-	return j >= RegionalMap.VORONOI_DIM - 3;
+	int j = (int)((y - parent->GetWorldY()) * RegionalMap::VORONOI_DIM);
+	return j >= RegionalMap::VORONOI_DIM - 3;
 }
 bool 
 SamplePoint::NearWestEdge()
 {
-	int i = (int)((x - parent.GetWorldX()) * RegionalMap.VORONOI_DIM);
+	int i = (int)((x - parent->GetWorldX()) * RegionalMap::VORONOI_DIM);
 	return i < 3;
 }
 bool 
 SamplePoint::NearEastEdge()
 {
-	int i = (int)((x - parent.GetWorldX()) * RegionalMap.VORONOI_DIM);
-	return i >= RegionalMap.VORONOI_DIM - 3;
+	int i = (int)((x - parent->GetWorldX()) * RegionalMap::VORONOI_DIM);
+	return i >= RegionalMap::VORONOI_DIM - 3;
 }
 
 void 
@@ -313,7 +314,7 @@ SamplePoint::CalculateAdjacencies()
 	//10 seems sufficient to find all adjacencies, but it occasionally messes up
 	//the circumcenter check on real adjacencies. Boosting to 15 seems sufficient
 	//to make that check effectively perfect
-	const vector<SamplePoint*> adj = parent.GetNearestN(x, y, 15);
+	const vector<SamplePoint*> adj = parent->GetNearestN(x, y, 15);
 	for (SamplePoint* vp : adj)
 	{
 		double dist = sqrt((vp->x - x) * (vp->x - x) + (vp->y - y) * (vp->y - y));

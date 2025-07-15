@@ -1,6 +1,9 @@
 #include "MeshPoint.h"
 #include "MeshConnection.h"
+#include "VoronoiAlgorithms.h"
 #include <algorithm>
+#include "RegionalMap.h"
+#include "LocalMap.h"
 
 using namespace std;
 
@@ -158,7 +161,7 @@ MeshPoint::CalculatePersonalDrainageArea()
 	}
 	lock.unlock();
 	sort(directlyAdjacent.begin(), directlyAdjacent.end(),
-		[this](const MeshPoint*& o1, const MeshPoint*& o2) {
+		[this](MeshPoint* o1, MeshPoint* o2) {
 			double theta1 = atan2(o1->x - x, o1->y - y);
 			double theta2 = atan2(o2->x - x, o2->y - y);
 			if (theta1 < theta2)
@@ -171,7 +174,7 @@ MeshPoint::CalculatePersonalDrainageArea()
 	{
 		MeshPoint* one = directlyAdjacent[i];
 		MeshPoint* two = directlyAdjacent[(i + 1) % directlyAdjacent.size()];
-		double area = VoronoiAlgorithms.TriangleArea(this, one, two);
+		double area = VoronoiAlgorithms::TriangleArea(this, one, two);
 		personalDrainageArea += area / 3;
 	}
 }
@@ -270,5 +273,5 @@ MeshPoint::GetClosestDirectAdjacency(MeshPoint* adj)
 double 
 MeshPoint::ConvertVoronoiDistToMeters(double d)
 {
-	return d * RegionalMap.DIMENSION * LocalMap.METER_DIM;
+	return d * RegionalMap::DIMENSION * LocalMap::METER_DIM;
 }

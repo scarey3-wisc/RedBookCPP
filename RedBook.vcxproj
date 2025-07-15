@@ -150,6 +150,7 @@
     <ClInclude Include="external\imgui\imstb_textedit.h" />
     <ClInclude Include="external\imgui\imstb_truetype.h" />
     <ClInclude Include="GlobalRand.h" />
+    <ClInclude Include="LocalMap.h" />
     <ClInclude Include="MathToolkit.h" />
     <ClInclude Include="MeshConnection.h" />
     <ClInclude Include="MeshMidPoint.h" />
@@ -161,6 +162,7 @@
     <ClInclude Include="TerrainTemplate.h" />
     <ClInclude Include="TerrainType.h" />
     <ClInclude Include="VoronoiAlgorithms.h" />
+    <ClInclude Include="WatermapValue.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp" />
@@ -170,6 +172,7 @@
     <ClCompile Include="external\imgui\imgui_draw.cpp" />
     <ClCompile Include="external\imgui\imgui_tables.cpp" />
     <ClCompile Include="external\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="LocalMap.cpp" />
     <ClCompile Include="MeshConnection.cpp" />
     <ClCompile Include="MeshMidPoint.cpp" />
     <ClCompile Include="MeshPoint.cpp" />

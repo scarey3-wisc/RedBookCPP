@@ -1,9 +1,11 @@
+#include <queue>
+#include <limits>
 #include "VoronoiAlgorithms.h"
 #include "MeshConnection.h"
 #include "Perlin.h"
-#include <queue>
-#include <limits>
 #include "MathToolkit.h"
+#include "MeshMidPoint.h"
+#include "SamplePoint.h"
 
 
 using namespace std;
@@ -134,12 +136,12 @@ VoronoiAlgorithms::IncreaseFractureLevel(vector<SamplePoint*>& area)
 void 
 VoronoiAlgorithms::SetRiverFlow(vector<SamplePoint*>& continent)
 {
-	VoronoiAlgorithms.SortByElevation(continent);
+	VoronoiAlgorithms::SortByElevation(continent);
 	for (SamplePoint* c : continent)
 	{
 		c->ResetRiver();
 	}
-	for (int i = continent.size() - 1; i >= 0; i--)
+	for (size_t i = continent.size() - 1; i >= 0; i--)
 	{
 		SamplePoint* p = continent[i];
 		if (p->RiverFlowProcessed())
@@ -153,7 +155,7 @@ VoronoiAlgorithms::SetRiverFlow(vector<SamplePoint*>& continent)
 		//We're checking for a lake block; a block of points all at the same elev
 		//j is the index of the next point that goes lower
 		bool atOcean = false;
-		int j = i - 1;
+		size_t j = i - 1;
 		while (continent[j]->GetElevation() == p->GetElevation())
 		{
 			j--;
@@ -176,7 +178,7 @@ VoronoiAlgorithms::SetRiverFlow(vector<SamplePoint*>& continent)
 		//These are locations on our lake block which have a way down
 		vector<SamplePoint*> found;
 		queue<SamplePoint*> horizon;
-		for (int k = i; k != j; k--)
+		for (size_t k = i; k != j; k--)
 		{
 			if (continent[k]->GetWayDownhill(true, false) != nullptr)
 				horizon.push(continent[k]);
@@ -189,7 +191,7 @@ VoronoiAlgorithms::SetRiverFlow(vector<SamplePoint*>& continent)
 			for (SamplePoint* adj : curr->GrabAdjacentUnassignedRiverFlows(false))
 				horizon.push(adj);
 		}
-		for (int k = found.size() - 1; k >= 0; k--)
+		for (size_t k = found.size() - 1; k >= 0; k--)
 		{
 			found[k]->SendFlowToOutlet();
 		}
@@ -221,7 +223,7 @@ void
 VoronoiAlgorithms::ConvertSeasToLakes(vector<SamplePoint*>& continentCoast, int maxLakeSize)
 {
 	vector<vector<SamplePoint*>> seas =
-		VoronoiAlgorithms.FindTypeClumps(continentCoast, TerrainTemplate::OCEAN, maxLakeSize);
+		VoronoiAlgorithms::FindTypeClumps(continentCoast, TerrainTemplate::OCEAN, maxLakeSize);
 	for (vector<SamplePoint*> gp : seas)
 	{
 		for (SamplePoint* v : gp)
@@ -503,263 +505,267 @@ VoronoiAlgorithms::FindContainingSampleTriangle(double x, double y, SamplePoint*
 	results[2] = nullptr;
 	return results;
 }
-private static void ClearHeights(ArrayList<SamplePoint> coastalPoints)
+void 
+VoronoiAlgorithms::ClearHeights(vector<SamplePoint*>& coastalPoints)
 {
-	LinkedList<SamplePoint> frontier = new LinkedList<SamplePoint>();
-	SamplePoint.StartNewSearch();
-	for (SamplePoint vp : coastalPoints)
+	deque<SamplePoint*> frontier;
+	SamplePoint::StartNewSearch();
+	for (SamplePoint* vp : coastalPoints)
 	{
-		if (vp.IsOcean() || vp.Reached())
+		if (vp->IsOcean() || vp->Reached())
 			continue;
-		vp.MarkAsReached();
-		frontier.addLast(vp);
+		vp->MarkAsReached();
+		frontier.push_back(vp);
 	}
-	while (!frontier.isEmpty())
+	while (!frontier.empty())
 	{
-		SamplePoint curr = frontier.removeFirst();
-		curr.ResetElevation();
-		for (SamplePoint vp : curr.GetAdjacentSamples())
+		SamplePoint* curr = frontier.front();
+		frontier.pop_front();
+		curr->ResetElevation();
+		for (SamplePoint* vp : curr->GetAdjacentSamples())
 		{
-			if (vp.IsOcean() || vp.Reached())
+			if (vp->IsOcean() || vp->Reached())
 				continue;
-			frontier.addLast(vp);
-			vp.MarkAsReached();
+			frontier.push_back(vp);
+			vp->MarkAsReached();
 		}
 	}
 }
-public static void AssignHeights(ArrayList<SamplePoint> coastalPoints)
+
+void 
+VoronoiAlgorithms::AssignHeights(std::vector<SamplePoint*>& coastalPoints)
 {
 	ClearHeights(coastalPoints);
-	PriorityQueue<VoronoiNode> frontier = new PriorityQueue<VoronoiNode>();
-	SamplePoint.StartNewSearch();
-	for (SamplePoint vp : coastalPoints)
+	auto cmp = [](SamplePoint* lhs, SamplePoint* rhs) {
+		return lhs->GetElevation() > rhs->GetElevation(); // min-heap: lower elevation first
+	};
+
+	priority_queue<SamplePoint*, std::vector<SamplePoint*>, decltype(cmp)> frontier(cmp);
+	SamplePoint::StartNewSearch();
+	// Initialize the frontier with coastal points
+	for (SamplePoint* vp : coastalPoints)
 	{
-		if (vp.IsOcean())
+		if (vp->IsOcean())
 			continue;
 		double distToOcean = -1;
-		for (SamplePoint adj : vp.GetAdjacentSamples())
+		for (SamplePoint* adj : vp->GetAdjacentSamples())
 		{
-			if (adj.IsOcean())
+			if (adj->IsOcean())
 			{
-				double dist = vp.DistTo(adj);
+				double dist = vp->DistTo(adj);
 				if (distToOcean == -1 || dist < distToOcean)
 					distToOcean = dist;
 			}
 		}
 		if (distToOcean == -1)
 			continue;
-		distToOcean = SamplePoint.ConvertVoronoiDistToMeters(distToOcean / 2);
-		double grade = QueryGrade(TerrainType.OCEAN, vp);
+		distToOcean = SamplePoint::ConvertVoronoiDistToMeters(distToOcean / 2);
+		double grade = QueryGrade(TerrainType::OCEAN, vp);
 
 		double delta = distToOcean * grade;
-		vp.SetElevation(delta);
-		frontier.offer(new VoronoiNode(vp, vp.GetElevation()));
+		vp->SetElevation(delta);
+		frontier.push(vp);
 	}
-	while (!frontier.isEmpty())
+	while (!frontier.empty())
 	{
-		VoronoiNode curr = frontier.poll();
-		if (curr.v.Reached())
+		SamplePoint* curr = frontier.top();
+		frontier.pop();
+		if (curr->Reached())
 			continue;
-		curr.v.MarkAsReached();
-		for (SamplePoint adj : curr.v.GetAdjacentSamples())
+		curr->MarkAsReached();
+		for (SamplePoint* adj : curr->GetAdjacentSamples())
 		{
-			if (adj.IsOcean() || adj.Reached())
+			if (adj->IsOcean() || adj->Reached())
 				continue;
-			double distTo = SamplePoint.ConvertVoronoiDistToMeters(curr.v.DistTo(adj));
-			if (curr.v.type.IsTerrainOfType(TerrainType.LAKE) || curr.v.type.IsTerrainOfType(TerrainTemplate.OCEAN))
+			double distTo = SamplePoint::ConvertVoronoiDistToMeters(curr->DistTo(adj));
+			if (curr->type.IsTerrainOfType(TerrainType::LAKE) || curr->type.IsTerrainOfType(TerrainTemplate::OCEAN))
 				distTo /= 2;
 
-			double grade = QueryGrade(curr.v.type, adj);
+			double grade = QueryGrade(curr->type, adj);
 
 			double candDelta = distTo * grade;
-			double candValue = curr.v.GetElevation() + candDelta;
-			if (candValue < adj.GetElevation())
+			double candValue = curr->GetElevation() + candDelta;
+			if (candValue < adj->GetElevation())
 			{
-				adj.SetElevation(candValue);
-				frontier.offer(new VoronoiNode(adj, adj.GetElevation()));
+				adj->SetElevation(candValue);
+				frontier.push(adj);
 			}
-
 		}
 	}
 }
-public static void SortByElevation(ArrayList< ? extends MeshPoint> continent)
-{
-	Comparator<MeshPoint> compare = new Comparator<MeshPoint>()
-	{
 
-		@Override
-			public int compare(MeshPoint o1, MeshPoint o2) {
-			if (o1.GetElevation() < o2.GetElevation())
-				return -1;
-			if (o1.GetElevation() > o2.GetElevation())
-				return 1;
-			return 0;
-		}
-	};
-	continent.sort(compare);
+void
+VoronoiAlgorithms::SortByElevation(vector<SamplePoint*>& continent)
+{
+	sort(continent.begin(), continent.end(),
+		[](MeshPoint* a, MeshPoint* b) {
+			return a->GetElevation() < b->GetElevation();
+		});
 }
 
-public static ArrayList<SamplePoint> FindAllOfType(ArrayList<SamplePoint> area, TerrainTemplate target)
+void 
+VoronoiAlgorithms::SortByElevation(vector<MeshPoint*>& continent)
 {
-	ArrayList<SamplePoint> found = new ArrayList<SamplePoint>();
-	for (SamplePoint sp : area)
-		if (sp.type.IsTerrainOfType(target))
-			found.add(sp);
+	sort(continent.begin(), continent.end(),
+		[](MeshPoint* a, MeshPoint* b) {
+			return a->GetElevation() < b->GetElevation();
+		});
+}
+
+vector<SamplePoint*> 
+VoronoiAlgorithms::FindAllOfType(vector<SamplePoint*>& area, TerrainTemplate target)
+{
+	vector<SamplePoint*> found;
+	for (SamplePoint* sp : area)
+		if (sp->type.IsTerrainOfType(target))
+			found.push_back(sp);
 	return found;
 }
 //NOTE: the seeds are assumed to be *adjacent* to Terrain of the target type.
 //The classic use case here is having coastal 
-public static ArrayList<ArrayList<SamplePoint>> FindTypeClumps(ArrayList<SamplePoint> seeds, TerrainTemplate target, int maxNum)
+vector<vector<SamplePoint*>> 
+VoronoiAlgorithms::FindTypeClumps(vector<SamplePoint*>& seeds, TerrainTemplate target, int maxNum)
 {
-	ArrayList<ArrayList<SamplePoint>> found = new ArrayList<ArrayList<SamplePoint>>();
-	SamplePoint.StartNewSearch();
-	for (SamplePoint cs : seeds)
+	vector<vector<SamplePoint*>> found;
+	SamplePoint::StartNewSearch();
+	for (SamplePoint* cs : seeds)
 	{
-		for (SamplePoint ts : cs.GetAdjacentSamples())
+		for (SamplePoint* ts : cs->GetAdjacentSamples())
 		{
-			ArrayList<SamplePoint> group = new ArrayList<SamplePoint>();
-			if (ts.Reached())
+			vector<SamplePoint*> group;
+			if (ts->Reached())
 				continue;
-			if (!ts.type.IsTerrainOfType(target))
+			if (!ts->type.IsTerrainOfType(target))
 				continue;
-			LinkedList<SamplePoint> horizon = new LinkedList<SamplePoint>();
-			ts.MarkAsReached();
-			horizon.addLast(ts);
-			while (!horizon.isEmpty())
+			deque<SamplePoint*> horizon;
+			ts->MarkAsReached();
+			horizon.push_back(ts);
+			while (!horizon.empty())
 			{
-				SamplePoint curr = horizon.removeFirst();
-				group.add(curr);
-				for (SamplePoint adj : curr.GetAdjacentSamples())
+				SamplePoint* curr = horizon.front();
+				horizon.pop_front();
+				group.push_back(curr);
+				for (SamplePoint* adj : curr->GetAdjacentSamples())
 				{
-					if (adj.Reached())
+					if (adj->Reached())
 						continue;
-					if (!adj.type.IsTerrainOfType(target))
+					if (!adj->type.IsTerrainOfType(target))
 						continue;
-					adj.MarkAsReached();
-					horizon.addLast(adj);
+					adj->MarkAsReached();
+					horizon.push_back(adj);
 				}
 			}
 			if (group.size() <= maxNum)
-				found.add(group);
+				found.push_back(group);
 		}
 	}
 	return found;
 }
-public static ArrayList<SamplePoint> FindAllWithinBoundary(SamplePoint seed, TerrainTemplate boundaryType)
+vector<SamplePoint*> 
+VoronoiAlgorithms::FindAllWithinBoundary(SamplePoint* seed, TerrainTemplate boundaryType)
 {
-	ArrayList<SamplePoint> listedSeeds = new ArrayList<SamplePoint>();
-	listedSeeds.add(seed);
+	vector<SamplePoint*> listedSeeds;
+	listedSeeds.push_back(seed);
 	return FindAllWithinBoundary(listedSeeds, boundaryType);
 }
-public static ArrayList<SamplePoint> FindAllWithinBoundary(ArrayList<SamplePoint> seeds, TerrainTemplate boundaryType)
+
+vector<SamplePoint*> 
+VoronoiAlgorithms::FindAllWithinBoundary(std::vector<SamplePoint*>& seeds, TerrainTemplate boundaryType)
 {
-	SamplePoint.StartNewSearch();
-	ArrayList<SamplePoint> found = new ArrayList<SamplePoint>();
-	LinkedList<SamplePoint> horizon = new LinkedList<SamplePoint>();
-	for (SamplePoint seed : seeds)
+	SamplePoint::StartNewSearch();
+	vector<SamplePoint*> found;
+	deque<SamplePoint*> horizon;
+	for (SamplePoint* seed : seeds)
 	{
-		if (seed.type.IsTerrainOfType(boundaryType))
+		if (seed->type.IsTerrainOfType(boundaryType))
 			continue;
-		if (seed.Reached())
+		if (seed->Reached())
 			continue;
-		horizon.add(seed);
-		seed.MarkAsReached();
+		horizon.push_back(seed);
+		seed->MarkAsReached();
 	}
 
-	while (!horizon.isEmpty())
+	while (!horizon.empty())
 	{
-		SamplePoint curr = horizon.removeFirst();
-		for (SamplePoint vp : curr.GetAdjacentSamples())
+		SamplePoint* curr = horizon.front();
+		horizon.pop_front();
+		for (SamplePoint* vp : curr->GetAdjacentSamples())
 		{
-			if (vp.Reached())
+			if (vp->Reached())
 				continue;
-			if (!vp.type.IsTerrainOfType(boundaryType))
+			if (!vp->type.IsTerrainOfType(boundaryType))
 			{
-				vp.MarkAsReached();
-				horizon.addLast(vp);
+				vp->MarkAsReached();
+				horizon.push_back(vp);
 			}
 		}
-		found.add(curr);
+		found.push_back(curr);
 	}
 	return found;
 }
-public static ArrayList<SamplePoint> FindBoundaryPoints(SamplePoint seed, TerrainTemplate boundaryTo)
+vector<SamplePoint*> 
+VoronoiAlgorithms::FindBoundaryPoints(SamplePoint* seed, TerrainTemplate boundaryTo)
 {
-	ArrayList<SamplePoint> listedSeeds = new ArrayList<SamplePoint>();
-	listedSeeds.add(seed);
+	vector<SamplePoint*> listedSeeds;
+	listedSeeds.push_back(seed);
 	return FindBoundaryPoints(listedSeeds, boundaryTo);
 }
-public static ArrayList<SamplePoint> FindBoundaryPoints(ArrayList<SamplePoint> seeds, TerrainTemplate boundaryTo)
+vector<SamplePoint*> 
+VoronoiAlgorithms::FindBoundaryPoints(vector<SamplePoint*>& seeds, TerrainTemplate boundaryTo)
 {
-	SamplePoint.StartNewSearch();
-	ArrayList<SamplePoint> found = new ArrayList<SamplePoint>();
-	LinkedList<SamplePoint> horizon = new LinkedList<SamplePoint>();
-	for (SamplePoint seed : seeds)
+	SamplePoint::StartNewSearch();
+	vector<SamplePoint*> found;
+	deque<SamplePoint*> horizon;
+	for (SamplePoint* seed : seeds)
 	{
-		if (!seed.Reached())
-			horizon.add(seed);
-		seed.MarkAsReached();
+		if (!seed->Reached())
+			horizon.push_back(seed);
+		seed->MarkAsReached();
 	}
-	while (!horizon.isEmpty())
+	while (!horizon.empty())
 	{
-		SamplePoint curr = horizon.removeFirst();
-		if (curr.type.IsTerrainOfType(boundaryTo))
+		SamplePoint* curr = horizon.front();
+		horizon.pop_front();
+		if (curr->type.IsTerrainOfType(boundaryTo))
 		{
-			for (SamplePoint vp : curr.GetAdjacentSamples())
+			for (SamplePoint* vp : curr->GetAdjacentSamples())
 			{
-				if (vp.Reached())
+				if (vp->Reached())
 					continue;
-				vp.MarkAsReached();
-				if (vp.type.IsTerrainOfType(boundaryTo))
-					horizon.addLast(vp);
+				vp->MarkAsReached();
+				if (vp->type.IsTerrainOfType(boundaryTo))
+					horizon.push_back(vp);
 				else
-					found.add(vp);
+					found.push_back(vp);
 			}
 		}
 		else
 		{
-			boolean amBoundary = false;
-			for (SamplePoint vp : curr.GetAdjacentSamples())
+			bool amBoundary = false;
+			for (SamplePoint* vp : curr->GetAdjacentSamples())
 			{
-				if (vp.type.IsTerrainOfType(boundaryTo))
+				if (vp->type.IsTerrainOfType(boundaryTo))
 					amBoundary = true;
-				if (vp.Reached())
+				if (vp->Reached())
 					continue;
-				if (!vp.type.IsTerrainOfType(boundaryTo))
+				if (!vp->type.IsTerrainOfType(boundaryTo))
 				{
-					vp.MarkAsReached();
-					horizon.addLast(vp);
+					vp->MarkAsReached();
+					horizon.push_back(vp);
 				}
 			}
 			if (amBoundary)
-				found.add(curr);
+				found.push_back(curr);
 		}
 	}
 	return found;
 }
-private static class VoronoiNode implements Comparable<VoronoiNode>
+double 
+VoronoiAlgorithms::QueryGrade(TerrainTemplate from, SamplePoint* to)
 {
-	private double dist;
-	public SamplePoint v;
-	public VoronoiNode(SamplePoint vp, double dist)
-	{
-		v = vp;
-		this.dist = dist;
-	}
-	@Override
-		public int compareTo(VoronoiNode o) {
-		if (dist > o.dist)
-			return 1;
-		if (dist < o.dist)
-			return -1;
-		return 0;
-	}
-}
-private static double QueryGrade(TerrainTemplate from, SamplePoint to)
-{
-	double minGrade = QueryGrade(from, to.type, true);
-	double maxGrade = QueryGrade(from, to.type, false);
-	double perlinPush = Perlin.minMaxSelector.Get(to.x, to.y);
+	double minGrade = QueryGrade(from, to->type, true);
+	double maxGrade = QueryGrade(from, to->type, false);
+	double perlinPush = Perlin::minMaxSelector.Get(to->x, to->y);
 	perlinPush += 1;
 	perlinPush /= 2;
 	if (perlinPush < 0)
@@ -769,7 +775,9 @@ private static double QueryGrade(TerrainTemplate from, SamplePoint to)
 	double grade = perlinPush * maxGrade + (1 - perlinPush) * minGrade;
 	return grade;
 }
-private static double QueryGrade(TerrainTemplate from, TerrainTemplate to, boolean min)
+
+double 
+VoronoiAlgorithms::QueryGrade(TerrainTemplate from, TerrainTemplate to, bool min)
 {
 	int fromIndex = GradeQueryIndex(from);
 	int toIndex = GradeQueryIndex(to);
@@ -778,34 +786,19 @@ private static double QueryGrade(TerrainTemplate from, TerrainTemplate to, boole
 	else
 		return GRADE_MAX_MATRIX[fromIndex][toIndex];
 }
-private static int GradeQueryIndex(TerrainTemplate type)
+int 
+VoronoiAlgorithms::GradeQueryIndex(TerrainTemplate type)
 {
-	if (type.IsTerrainOfType(TerrainTemplate.PEAKS))
+	if (type.IsTerrainOfType(TerrainTemplate::PEAKS))
 		return 4;
-	else if (type.IsTerrainOfType(TerrainTemplate.MOUNTAINS))
+	else if (type.IsTerrainOfType(TerrainTemplate::MOUNTAINS))
 		return 3;
-	else if (type.IsTerrainOfType(TerrainTemplate.HILLS))
+	else if (type.IsTerrainOfType(TerrainTemplate::HILLS))
 		return 2;
-	else if (type.IsTerrainOfType(TerrainTemplate.OCEAN))
+	else if (type.IsTerrainOfType(TerrainTemplate::OCEAN))
 		return 1;
-	else if (type.IsTerrainOfType(TerrainTemplate.LAKE))
+	else if (type.IsTerrainOfType(TerrainTemplate::LAKE))
 		return 1;
 	else
 		return 0;
 }
-private static double[][] GRADE_MAX_MATRIX = new double[][]
-{
-	{0.0040, 0.0000, 0.0250, 0.1800, 0.3000}, //From flatland to...
-	{0.0040, 0.0000, 0.1500, 0.5000, 0.5000}, //From ocean to...
-	{0.0005, 0.0000, 0.0200, 0.1800, 0.3000}, //From hills to...
-	{0.0005, 0.0000, 0.0100, 0.0300, 0.3000}, //From mountains to...
-	{0.0005, 0.0000, 0.0100, 0.0100, 0.3000}  //From peaks to...
-};
-private static double[][] GRADE_MIN_MATRIX = new double[][]
-{
-	{0.0005, 0.0000, 0.0070, 0.0300, 0.1000}, //From flatland to...
-	{0.0005, 0.0000, 0.0800, 0.1800, 0.2000}, //From ocean to...
-	{0.0001, 0.0000, 0.0050, 0.0500, 0.1000}, //From hills to...
-	{0.0001, 0.0000, 0.0010, 0.0100, 0.1000}, //From mountains to...
-	{0.0001, 0.0000, 0.0010, 0.0100, 0.1000}  //From peaks to...
-};

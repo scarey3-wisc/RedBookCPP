@@ -1,9 +1,9 @@
 #pragma once
-#include "MeshPoint.h"
 #include "TerrainType.h"
-#include "RegionalMap.h"
+#include "MeshPoint.h"
 #include <glm.hpp>
 
+class RegionalMap;
 
 class SamplePoint : public MeshPoint
 {

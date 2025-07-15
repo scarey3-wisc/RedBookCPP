@@ -1,7 +1,8 @@
 #pragma once
-#include "MeshMidPoint.h"
-#include "MeshPoint.h"
 #include <optional>
+#include "MeshPoint.h"
+#include "MeshMidPoint.h"
+
 class MeshConnection
 {
 public:

@@ -1,4 +1,5 @@
 #include "MeshConnection.h"
+#include "MeshMidPoint.h"
 #include <glm.hpp>
 #include <iostream>
 #include <unordered_set>

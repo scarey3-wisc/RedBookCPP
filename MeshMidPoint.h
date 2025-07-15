@@ -1,5 +1,8 @@
 #pragma once
+#include <vector>
 #include "MeshPoint.h"
+
+class MeshConnection;
 
 class MeshMidPoint : public MeshPoint
 {
@@ -36,7 +39,7 @@ private:
 	double maxGrade;
 
 	inline static constexpr uint8_t NotWater = 0;
-	inline static constexpr uint8_t Ocean = 0;
-	inline static constexpr uint8_t InlandLake = 0;
+	inline static constexpr uint8_t Ocean = 1;
+	inline static constexpr uint8_t InlandLake = 2;
 };
 
