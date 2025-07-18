@@ -149,6 +149,35 @@ LocalMap::SendRandomRainErosion(int numDroplets)
 	}*/
 }
 
+double 
+LocalMap::GetHeight(int px, int py)
+{
+	return 0;
+	//return heightmap.Get(px, py);
+}
+//local coordinates - going from 0 to 1 in this local map
+double 
+LocalMap::GetHeight(double lX, double lY)
+{
+	return 0;
+	//return heightmap.Get(lX, lY);
+}
+glm::dvec2 
+LocalMap::GetHeightGradient(double lX, double lY)
+{
+	glm::dvec2 grad(0, 0);
+	//Vec2 grad = heightmap.GetGradient(lX, lY);
+	grad /= METER_DIM;
+	return grad;
+}
+double 
+LocalMap::GetHeightLaplacian(double lX, double lY)
+{
+	double lap = 0;
+	//double lap = heightmap.GetLaplacian(lX, lY);
+	lap /= (METER_DIM * METER_DIM);
+	return lap;
+}
 
 int 
 LocalMap::GetWorldX()

@@ -7,7 +7,6 @@
 #include "LocalMap.h"
 
 class WorldMap;
-class LocalMap;
 class SamplePoint;
 
 /*
@@ -95,8 +94,8 @@ public:
 
 private:
 	int x, y; //while tile am I in the World Map?
-	LocalMap* topography[DIMENSION * DIMENSION];
-	SamplePoint* terrainCells[VORONOI_DIM * VORONOI_DIM];
+	LocalMap* topography[DIMENSION * DIMENSION] = {};
+	SamplePoint* terrainCells[VORONOI_DIM * VORONOI_DIM] = {};
 	std::vector<SamplePoint*> voronoiList;
 	WorldMap* parent;
 	bool readyToRender;

@@ -15,6 +15,12 @@ public:
         return dist(engine());
     }
 
+    static double Double(double min = 0.0, double max = 1.0)
+    {
+        std::uniform_real_distribution<double> dist(min, max);
+        return dist(engine());
+    }
+
 private:
     static std::mt19937& engine()
     {

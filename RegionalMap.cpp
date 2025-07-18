@@ -4,6 +4,8 @@
 #include "VoronoiAlgorithms.h"
 #include "MeshConnection.h"
 #include "Switches.h"
+#include "WaterDroplet.h"
+#include "WorldMap.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -21,8 +23,8 @@ RegionalMap::RegionalMap(int x, int y, WorldMap* p) : x(x), y(y), parent(p), rea
 			topography[i * DIMENSION + j] = new LocalMap(i, j, this);
 		}
 	}
-	EnsureBasicDirectoryStructureExists();
-	SaveBasicDescription();
+	//EnsureBasicDirectoryStructureExists();
+	//SaveBasicDescription();
 }
 /*public RegionalMap(String directory, WorldMap parent)
 {
@@ -1166,8 +1168,8 @@ RegionalMap::RunFullPhasedErosion()
 	unordered_map<LocalMap*, bool> used = PrepareForExtensiveEditing();
 	cout << "Preparing Pixels" << endl;
 	unordered_map<LocalMap*, bool> usedForPixels;
-	vector<LocalMap::Pixel> allPixels =
-		LocalTerrainAlgorithms::BeginPixelOperation(usedForPixels, targets, true, true, true, true, true);
+	//vector<LocalMap::Pixel> allPixels =
+	//	LocalTerrainAlgorithms::BeginPixelOperation(usedForPixels, targets, true, true, true, true, true);
 
 	for (int n = 0; n < 20; n++)
 	{
@@ -1221,7 +1223,7 @@ RegionalMap::RunFullPhasedErosion()
 	cout << "********" << endl;
 	cout << "FLUVIAL THERMAL 1" << endl;
 	cout << "********" << endl << endl;
-	LocalTerrainAlgorithms::ThermalFluvialErosion(allPixels, 10);
+	//LocalTerrainAlgorithms::ThermalFluvialErosion(allPixels, 10);
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -1255,9 +1257,9 @@ RegionalMap::RunFullPhasedErosion()
 	cout << "********" << endl;
 	cout << "FINAL HYDROLOGY" << endl;
 	cout << "********" << endl << endl;
-	LocalTerrainAlgorithms::GuaranteeConsistentHydrology(allPixels);
+	//LocalTerrainAlgorithms::GuaranteeConsistentHydrology(allPixels);
 
-	LocalTerrainAlgorithms::EndPixelOperation(usedForPixels, true, true, true, true, true);
+	//LocalTerrainAlgorithms::EndPixelOperation(usedForPixels, true, true, true, true, true);
 
 	for (auto lm : used)
 	{
@@ -1347,11 +1349,9 @@ RegionalMap::GetElevation(double wX, double wY)
 	double x = wX / RegionalMap::DIMENSION;
 	double y = wY / RegionalMap::DIMENSION;
 	LocalMap::Coordinate lmc = GetLocalMapAt(x - GetWorldX(), y - GetWorldY());
-	if (lmc == null)
+	if (lmc.src == nullptr)
 		return 0;
-	if (lmc.GetLocalMap() == nullptr)
-		return 0;
-	return lmc.GetLocalMap()->GetHeight(lmc.x, lmc.y);
+	return lmc.src->GetHeight(lmc.x, lmc.y);
 }
 
 WatermapValue 

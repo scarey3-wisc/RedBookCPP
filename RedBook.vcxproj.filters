@@ -53,6 +53,12 @@
     <ClCompile Include="LocalMap.cpp">
       <Filter>LocalData\Source</Filter>
     </ClCompile>
+    <ClCompile Include="WaterDroplet.cpp">
+      <Filter>Algorithms\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="WorldMap.cpp">
+      <Filter>UserInterface\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\imgui\imconfig.h">
@@ -124,6 +130,12 @@
     <ClInclude Include="LocalMap.h">
       <Filter>LocalData\Headers</Filter>
     </ClInclude>
+    <ClInclude Include="WaterDroplet.h">
+      <Filter>Algorithms\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WorldMap.h">
+      <Filter>UserInterface\Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
@@ -164,6 +176,15 @@
     </Filter>
     <Filter Include="Algorithms\Source">
       <UniqueIdentifier>{5727ef9f-4c76-4fae-aeb4-eb29f3733987}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UserInterface">
+      <UniqueIdentifier>{b4bbcb45-ab7f-41d4-9a14-5dea633294c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UserInterface\Source">
+      <UniqueIdentifier>{7a10c97c-351d-424a-8657-2b0445df15a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UserInterface\Headers">
+      <UniqueIdentifier>{ce5d54dd-f434-457c-a62d-34592a508d10}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

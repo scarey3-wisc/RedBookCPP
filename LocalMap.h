@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm.hpp>
+
 class RegionalMap;
 
 class LocalMap
@@ -12,6 +14,11 @@ public:
 	void CompleteEditing(bool height, bool water, bool rainflow, bool killWaterHeightsRec);
 	void LaplacianErosionIteration(int num);
 	void SendRandomRainErosion(int numDroplets);
+
+	double GetHeight(int px, int py);
+	double GetHeight(double lX, double lY);
+	glm::dvec2 GetHeightGradient(double lX, double lY);
+	double GetHeightLaplacian(double lX, double lY);
 
 	int GetWorldX();
 	int GetWorldY();

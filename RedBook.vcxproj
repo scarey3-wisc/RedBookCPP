@@ -162,7 +162,9 @@
     <ClInclude Include="TerrainTemplate.h" />
     <ClInclude Include="TerrainType.h" />
     <ClInclude Include="VoronoiAlgorithms.h" />
+    <ClInclude Include="WaterDroplet.h" />
     <ClInclude Include="WatermapValue.h" />
+    <ClInclude Include="WorldMap.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp" />
@@ -183,6 +185,8 @@
     <ClCompile Include="TerrainTemplate.cpp" />
     <ClCompile Include="TerrainType.cpp" />
     <ClCompile Include="VoronoiAlgorithms.cpp" />
+    <ClCompile Include="WaterDroplet.cpp" />
+    <ClCompile Include="WorldMap.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
