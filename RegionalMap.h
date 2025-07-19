@@ -18,6 +18,7 @@ class RegionalMap
 {
 public:
 	RegionalMap(int x, int y, WorldMap* p);
+	~RegionalMap();
 
 	SamplePoint* GetSamplePoint(int index);
 	void CalculateAllVoronoiAdjacencies();

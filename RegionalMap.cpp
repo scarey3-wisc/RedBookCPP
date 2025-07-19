@@ -16,6 +16,7 @@ using namespace std;
 
 RegionalMap::RegionalMap(int x, int y, WorldMap* p) : x(x), y(y), parent(p), readyToRender(false)
 {
+	std::cout << "Constructing RegionalMap " << x << ", " << y << " at " << this << std::endl;
 	for (int i = 0; i < DIMENSION; i++)
 	{
 		for (int j = 0; j < DIMENSION; j++)
@@ -25,6 +26,22 @@ RegionalMap::RegionalMap(int x, int y, WorldMap* p) : x(x), y(y), parent(p), rea
 	}
 	//EnsureBasicDirectoryStructureExists();
 	//SaveBasicDescription();
+}
+
+RegionalMap::~RegionalMap()
+{
+	std::cout << "Destructing RegionalMap " << x << ", " << y << " at " << this << std::endl;
+	for(int i = 0; i < DIMENSION * DIMENSION; i++)
+	{
+		if (topography[i] != nullptr)
+			delete topography[i];
+		topography[i] = nullptr;
+	}
+	for(SamplePoint* sp : voronoiList)
+	{
+		if (sp != nullptr)
+			delete sp;
+	}
 }
 /*public RegionalMap(String directory, WorldMap parent)
 {
@@ -1806,7 +1823,7 @@ RegionalMap::SetPoint(SamplePoint* p)
 	if (terrainCells[i * VORONOI_DIM + j] == nullptr)
 	{
 		terrainCells[i * VORONOI_DIM + j] = p;
-		int index = voronoiList.size();
+		int index = (int) voronoiList.size();
 		p->SetContainerIndex(index);
 		voronoiList.push_back(p);
 		p->AssignVoronoiTerrainType();

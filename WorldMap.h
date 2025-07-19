@@ -2,6 +2,9 @@
 #include <string>
 #include <vector>
 #include "RegionalMap.h"
+#include <glad/glad.h>
+#include "OutlineRendering.h"
+
 
 class SamplePoint;
 
@@ -9,6 +12,9 @@ class WorldMap
 {
 
 public:
+
+	WorldMap(const char* name);
+	~WorldMap();
 
 	void EnableAllRegionalRenderings();
 	RegionalMap* GetRegion(int x, int y);
@@ -23,19 +29,40 @@ public:
 	std::vector<SamplePoint*> PoissonDiscSample(std::vector<SamplePoint*>& active);
 	void FillAllContinents(int regionX, int regionY, std::vector<SamplePoint*>& allFound);
 
+	double GetTileSize() { return tileSize; }
+
+	bool TextureInit() const { return textureInit; }
+	GLuint Render(int width, int height);
+
 private:
 	void InitNewWorld();
 
+	void InitializeRenderTarget(int width, int height);
+
 public:
 	bool FileAvaiable;
+
+	double dX, dY;
+	int tileSize;
+
 private:
 	int x0, y0; //which cell in regions counts as "0,0"? This may change as we expand!
 	int w, h; //how many cells do we have?
 	RegionalMap** regions;
-	int tileSize;
 	//WorldMapTool activeTool;
 	//ZoomUpdater myZoom;
 	std::string worldName;
+
+
+private:
+	GLuint frameBuffer = 0;
+	GLuint renderTexture = 0;
+	OutlineRendering outlineRenderer;
+
+	bool textureInit = false;
+	int texWidth;
+	int texHeight;
+
 public:
 	inline static constexpr int DEFAULT_TILE_SIZE = 10; //how many pixels does a local map get?
 	inline static constexpr int MINIMUM_TILE_SIZE = 9;

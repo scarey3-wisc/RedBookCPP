@@ -3,6 +3,7 @@
 #include <random>
 #include <cstdint>
 #include <glm.hpp>
+#include <fstream>
 
 class Perlin
 {
@@ -59,7 +60,7 @@ private:
 	double threshold;
 	bool thresholdSet;
 	bool absThreshold;
-	uint32_t seed;
+	mutable uint32_t seed;
 	inline static constexpr double NORM_SCALE = 1.5;
 
 public: 
@@ -89,5 +90,5 @@ public:
 	static const int elevDeltaLength = 2;
 
 	static bool SaveSeeds(FILE* wr);
-	static bool LoadSeeds(FILE* rd);
+	static bool LoadSeeds(std::ifstream& rd);
 };

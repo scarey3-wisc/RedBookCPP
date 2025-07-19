@@ -105,7 +105,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)external\glm\glm\;$(ProjectDir)external\glfw-3.4\include\;$(ProjectDir)external\imgui\backends\;$(ProjectDir)external\imgui\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)external\glm\glm\;$(ProjectDir)external\glfw-3.4\include\;$(ProjectDir)external\imgui\backends\;$(ProjectDir)external\imgui\;$(ProjectDir)external\glad\include\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -125,7 +125,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)external\glm\glm\;$(ProjectDir)external\glfw-3.4\include\;$(ProjectDir)external\imgui\backends\;$(ProjectDir)external\imgui\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)external\glm\glm\;$(ProjectDir)external\glfw-3.4\include\;$(ProjectDir)external\imgui\backends\;$(ProjectDir)external\imgui\;$(ProjectDir)external\glad\include\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -155,8 +155,12 @@
     <ClInclude Include="MeshConnection.h" />
     <ClInclude Include="MeshMidPoint.h" />
     <ClInclude Include="MeshPoint.h" />
+    <ClInclude Include="OutlineRendering.h" />
     <ClInclude Include="Perlin.h" />
+    <ClInclude Include="RedBook.h" />
+    <ClInclude Include="RedBookGlobal.h" />
     <ClInclude Include="RegionalMap.h" />
+    <ClInclude Include="RenderUtils.h" />
     <ClInclude Include="SamplePoint.h" />
     <ClInclude Include="Switches.h" />
     <ClInclude Include="TerrainTemplate.h" />
@@ -167,6 +171,7 @@
     <ClInclude Include="WorldMap.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="external\glad\src\glad.c" />
     <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="external\imgui\backends\imgui_impl_opengl3.cpp" />
     <ClCompile Include="external\imgui\imgui.cpp" />
@@ -178,10 +183,13 @@
     <ClCompile Include="MeshConnection.cpp" />
     <ClCompile Include="MeshMidPoint.cpp" />
     <ClCompile Include="MeshPoint.cpp" />
+    <ClCompile Include="OutlineRendering.cpp" />
     <ClCompile Include="Perlin.cpp" />
     <ClCompile Include="RedBook.cpp" />
     <ClCompile Include="RegionalMap.cpp" />
+    <ClCompile Include="RenderUtils.cpp" />
     <ClCompile Include="SamplePoint.cpp" />
+    <ClCompile Include="Switches.cpp" />
     <ClCompile Include="TerrainTemplate.cpp" />
     <ClCompile Include="TerrainType.cpp" />
     <ClCompile Include="VoronoiAlgorithms.cpp" />

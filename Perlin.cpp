@@ -415,27 +415,29 @@ Perlin::SaveSeeds(FILE* wr)
 
 //------------------------------------------------------------------------------
 
-bool
-Perlin::LoadSeeds(FILE* rd)
+bool Perlin::LoadSeeds(std::ifstream& rd)
 {
-	fscanf(rd, "%u", &oceans.seed);
-	fscanf(rd, "%u", &mountains.seed);
-	fscanf(rd, "%u", &peaks.seed);
-	fscanf(rd, "%u", &foothills.seed);
-	fscanf(rd, "%u", &randomHills.seed);
-	fscanf(rd, "%u", &randomLakes.seed);
-	fscanf(rd, "%u", &randomPasses.seed);
-	fscanf(rd, "%u", &minMaxSelector.seed);
-	fscanf(rd, "%u", &upliftAdjust.seed);
-	fscanf(rd, "%u", &blurX.seed);
-	fscanf(rd, "%u", &blurY.seed);
-	fscanf(rd, "%u", &terra_incognita.seed);
-	fscanf(rd, "%u", &sedimentStepDelta.seed);
-	fscanf(rd, "%u", &sedimentStepMask.seed);
-	fscanf(rd, "%u", &rockyJitters.seed);
-	for (Perlin pf : elevDeltas)
-		fscanf(rd, "%u", &pf.seed);
-	if (ferror(rd))
-		return false;
-	return true;
+    uint32_t tempSeed = 0;
+    if (!(rd >> tempSeed)) return false; oceans.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; mountains.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; peaks.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; foothills.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; randomHills.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; randomLakes.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; randomPasses.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; minMaxSelector.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; upliftAdjust.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; blurX.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; blurY.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; terra_incognita.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; sedimentStepDelta.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; sedimentStepMask.seed = tempSeed;
+    if (!(rd >> tempSeed)) return false; rockyJitters.seed = tempSeed;
+
+    for (const Perlin& pf : elevDeltas) {
+        if (!(rd >> tempSeed)) return false;
+        pf.seed = tempSeed;
+    }
+
+    return rd.good();
 }

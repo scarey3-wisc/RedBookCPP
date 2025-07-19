@@ -7,13 +7,18 @@
 #include <numbers>
 #include <deque>
 #include <unordered_set>
+#include <iostream>
+#include <glm.hpp>
+#include <gtc/matrix_transform.hpp>
 
 using namespace std;
-/*public WorldMap(String name)
+WorldMap::WorldMap(const char* name) : 
+	worldName(name), FileAvaiable(true), regions(nullptr),
+	x0(0), y0(0), w(1), h(1), dX(0), dY(0), texWidth(0), texHeight(0)
 {
-	this.worldName = name;
 	tileSize = DEFAULT_TILE_SIZE;
-	File topDir = new File(GetDirectory());
+	InitNewWorld();
+	/*File topDir = new File(GetDirectory());
 	if (topDir.exists() && topDir.isDirectory())
 	{
 		FileAvailable = true;
@@ -23,9 +28,29 @@ using namespace std;
 		FileAvailable = false;
 		topDir.mkdir();
 		InitNewWorld();
-	}
+	}*/
 }
-public String GetDirectory()
+
+WorldMap::~WorldMap()
+{
+	if (regions != nullptr)
+	{
+		for (int i = 0; i < w * h; i++)
+		{
+			if (regions[i] != nullptr)
+				delete regions[i];
+		}
+		delete[] regions;
+		regions = nullptr;
+	}
+	if (frameBuffer != 0)
+		glDeleteFramebuffers(1, &frameBuffer);
+	if (renderTexture != 0)
+		glDeleteTextures(1, &renderTexture);
+
+	outlineRenderer.Cleanup();
+}
+/*public String GetDirectory()
 {
 	return K_SAVE_FOLDER_NAME + File.separator + worldName;
 }
@@ -65,7 +90,7 @@ WorldMap::InitNewWorld()
 {
 	w = 1;
 	h = 1;
-	regions = new RegionalMap * [w * h];
+	regions = new RegionalMap* [w * h];
 	x0 = 0;
 	y0 = 0;
 	RegionalMap::ScrollOriginOffsetForOptimalCoastliness();
@@ -269,7 +294,7 @@ WorldMap::InitPoissonDiscSample(RegionalMap* target)
 		return;
 	}
 	active.push_back(start);
-	PoissonDiscSample(active);
+	vector<SamplePoint*> created = PoissonDiscSample(active);
 	target->CalculateAllVoronoiAdjacencies();
 	//target.SaveSampleList(true);
 	//target.SaveSampleAdjacencies(true);
@@ -511,7 +536,7 @@ WorldMap::ExpandEmptySpace(int posXInc, int negXInc, int posYInc, int negYInc)
 	int newH = h + posYInc + negYInc;
 	int newX0 = x0 + negXInc;
 	int newY0 = y0 + negYInc;
-	RegionalMap** newRegions = new RegionalMap * [newW * newH];
+	RegionalMap** newRegions = new RegionalMap * [newW * newH] {};
 	for (int i = 0; i < newW; i++)
 		for (int j = 0; j < newH; j++)
 		{
@@ -612,8 +637,8 @@ WorldMap::GetRegionalMapAt(double x, double y, bool createIfNot)
 	y += y0 * regionDim;
 	x += 0.5 * regionDim;
 	y += 0.5 * regionDim;
-	//x -= dX;
-	//y -= dY;
+	x -= dX;
+	y -= dY;
 
 	int xIndex = (int) floor(x / regionDim);
 	int yIndex = (int) floor(y / regionDim);
@@ -634,6 +659,113 @@ WorldMap::GetRegionalMapAt(double x, double y, bool createIfNot)
 
 	return RegionalMap::Coordinate(x, y, found);
 }
+
+GLuint
+WorldMap::Render(int width, int height) 
+{
+	if(!textureInit || texWidth != width || texHeight != height) {
+		InitializeRenderTarget(width, height);
+		textureInit = true;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+	glViewport(0, 0, width, height);  // Set to texture size
+
+	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Render your map here...
+	float regionDim = (float) (tileSize * RegionalMap::DIMENSION);
+	if (false)
+	{
+
+	}
+	if (Switches::OUTLINE_MAPS)
+	{
+
+		float left = 0.0f;
+		float right = width;
+		float bottom = 0.0f;
+		float top = height;
+		float nearZ = -1.0f;
+		float farZ = 1.0f;
+
+		glm::mat4 orthoProj = glm::ortho(left, right, bottom, top, nearZ, farZ);
+		if(!outlineRenderer.IsInitialized())
+			outlineRenderer.Init();
+
+
+		float xOrigin = 0.0f, yOrigin = 0.0f;
+		xOrigin += width / 2, yOrigin += height / 2;
+		xOrigin -= 1 * x0 * regionDim; yOrigin -= 1 * y0 * regionDim;
+		xOrigin -= 0.5f * regionDim, yOrigin -= 0.5f * regionDim;
+		xOrigin += dX, yOrigin += dY;
+
+
+		for (int i = 0; i < w; i++)
+		{
+			for (int j = 0; j < h; j++)
+			{
+				bool onscreen = true;
+				if (xOrigin > width)
+					onscreen = false;
+				if (yOrigin > height)
+					onscreen = false;
+				if(xOrigin + regionDim < 0)
+					onscreen = false;
+				if (yOrigin + regionDim < 0)
+					onscreen = false;
+				if(onscreen && regions[i * h + j] != nullptr)
+					outlineRenderer.Render(xOrigin, yOrigin, regionDim, regionDim, orthoProj, glm::vec4(1, 1, 0, 1));
+				yOrigin += regionDim;
+			}
+			xOrigin += regionDim;
+			yOrigin -= h * regionDim;
+		}
+
+
+		//outlineRenderer.Render(5, 5, 10, 10, orthoProj, glm::vec4(1, 1, 0, 1));
+
+	}
+	if (Switches::PAINT_VORONOI_CENTERS)
+	{
+
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);  // Return to default framebuffer
+
+	return renderTexture;  // Return the texture ID for use in rendering
+}
+
+void 
+WorldMap::InitializeRenderTarget(int width, int height) 
+{
+
+	if (frameBuffer != 0) {
+		glDeleteFramebuffers(1, &frameBuffer);
+		glDeleteTextures(1, &renderTexture);
+	}
+
+	texWidth = width;
+	texHeight = height;
+
+	glGenFramebuffers(1, &frameBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+
+	// Create texture to render to
+	glGenTextures(1, &renderTexture);
+	glBindTexture(GL_TEXTURE_2D, renderTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, renderTexture, 0);
+
+}
+
+/*
+
+
 public synchronized void ZoomIn(int mouseX, int mouseY)
 {
 	double proposedZoom = 1.1 * tileSize;
@@ -653,10 +785,6 @@ public synchronized void ZoomOut(int mouseX, int mouseY)
 	double actualRatio = 1.0 * actualZoom / tileSize;
 	tileSize = actualZoom;
 	AdjustDeltas(mouseX, mouseY, actualRatio);
-}
-public double GetTileSize()
-{
-	return tileSize;
 }
 private void AdjustDeltas(int mouseX, int mouseY, double ratio)
 {
@@ -762,3 +890,9 @@ private class ZoomUpdater implements MouseWheelListener
 				ZoomOut(e.getX(), e.getY());
 	}
 }
+
+
+
+
+*/
+

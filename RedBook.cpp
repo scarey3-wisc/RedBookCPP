@@ -2,9 +2,231 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
+#include <glad/glad.h>
 #define GL_SILENCE_DEPRECATION
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <Windows.h>
+#include "RedBook.h"
+#include "RedBookGlobal.h"
+#include "Switches.h"
+#include <iostream>
+#include "WorldMap.h"
+#include "SamplePoint.h"
+#include <algorithm>
+
+using namespace std;
+using namespace RedBook;
+
+ImVec4 g_WhiteColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+ImVec4 g_BlackColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+ImVec4 g_GrayBackgroundColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+ImVec4 g_LightBlueTextColor = ImVec4(0.8f, 0.87f, 1.0f, 1.0f);
+ImVec4 g_LightBrownTextColor = ImVec4(0.8f, 0.7f, 0.6f, 1.0f);
+
+ImVec4 g_LightGreyButtonColor = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
+ImVec4 g_MediumGreyButtonColor = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
+ImVec4 g_DarkGreyButtonColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+
+WorldMap* myWorldMap = nullptr;
+
+
+void RedBookInfoPanel(float panelWidth)
+{
+    ImGui::Text("Render Info");
+    ImGui::Separator();
+    ImGui::Spacing();
+    for (int i = 0; i < TILE_RENDERING_CACHES; i++)
+    {
+		ImGui::Text("%s: %ld", TILE_RENDERING_NAMES[i], 50); // Placeholder for actual cache size
+    }
+	ImGui::Text("%d queued (placeholder)", 10); // Placeholder for render queue size
+    ImGui::NewLine();
+
+	int dimRange[] = { 0, 1, 2, 3, 4, 5 }; // Placeholder for actual dimension range
+    for (int i = 0; i < sizeof(dimRange) / sizeof(dimRange[0]); i++)
+    {
+        ImGui::Text("Dimension %d: %d", i, dimRange[i]); // Placeholder for actual dimension data
+	}
+	ImGui::Text("Smart Image Count: %d", 100); // Placeholder for smart image count
+    ImGui::NewLine();
+    ImGui::NewLine();
+
+
+    ImGui::PushStyleColor(ImGuiCol_Button, g_LightGreyButtonColor); // normal
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_MediumGreyButtonColor); // hover
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_DarkGreyButtonColor); // pressed
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, g_LightGreyButtonColor);      // box background
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, g_MediumGreyButtonColor); // hovered background
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, g_DarkGreyButtonColor);  // active background
+    ImGui::PushStyleColor(ImGuiCol_CheckMark, g_LightBrownTextColor);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+
+	ImGui::Text("Render Options");
+    ImGui::Separator();
+    ImGui::Spacing();
+    if (ImGui::Button("Clear Image Cache"))
+    {
+        // Clear image cache logic here
+    }
+	ImGui::Checkbox("Toggle Outlines", &Switches::OUTLINE_MAPS);
+	ImGui::Checkbox("Toggle Voronoi Centers", &Switches::PAINT_VORONOI_CENTERS);
+
+	ImGui::NewLine();
+    ImGui::NewLine();
+    ImGui::Text("Display Paint Modes");
+    ImGui::Separator();
+    ImGui::Spacing();
+    if (ImGui::RadioButton("Paint Terrain", Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::TERRAIN_PRETTY))
+        Switches::CURR_PAINT_TYPE = Switches::PAINT_TYPE::TERRAIN_PRETTY;
+    if (ImGui::RadioButton("Paint Photos", Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::PHOTOGRAPHY))
+        Switches::CURR_PAINT_TYPE = Switches::PAINT_TYPE::PHOTOGRAPHY;
+
+    ImGui::NewLine();
+	ImGui::NewLine();
+    ImGui::Text("Informational Paint Modes");
+    ImGui::Separator();
+	ImGui::Spacing();
+    if (ImGui::RadioButton("Paint Heightmap", Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::ELEVATION_CURR))
+        Switches::CURR_PAINT_TYPE = Switches::PAINT_TYPE::ELEVATION_CURR;
+    if (ImGui::RadioButton("Paint Terrain Type", Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::TERRAIN))
+        Switches::CURR_PAINT_TYPE = Switches::PAINT_TYPE::TERRAIN;
+    if (ImGui::RadioButton("Paint Contour Map", Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::CONTOUR))
+        Switches::CURR_PAINT_TYPE = Switches::PAINT_TYPE::CONTOUR;
+    if (ImGui::RadioButton("Paint Topography", Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::ELEV_GRADIENT))
+        Switches::CURR_PAINT_TYPE = Switches::PAINT_TYPE::ELEV_GRADIENT;
+
+    ImGui::NewLine();
+    ImGui::NewLine();
+    ImGui::Text("Diagnostic Paint Modes");
+    ImGui::Separator();
+    ImGui::Spacing();
+    if (ImGui::RadioButton("Paint Perlin Noise", Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::PERLIN_DISPLAY))
+        Switches::CURR_PAINT_TYPE = Switches::PAINT_TYPE::PERLIN_DISPLAY;
+    if (ImGui::RadioButton("Paint Voronoi Cells", Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::VORONOI_PURE))
+        Switches::CURR_PAINT_TYPE = Switches::PAINT_TYPE::VORONOI_PURE;
+    if (ImGui::RadioButton("Paint Voronoi Interpolation", Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::VORONOI_INTERPOLATED))
+        Switches::CURR_PAINT_TYPE = Switches::PAINT_TYPE::VORONOI_INTERPOLATED;
+    if (ImGui::RadioButton("Paint Voronoi Triangles", Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::VORONOI_TRIANGLES))
+        Switches::CURR_PAINT_TYPE = Switches::PAINT_TYPE::VORONOI_TRIANGLES;
+
+	ImGui::PopStyleColor(7); // Pop the button styles
+	ImGui::PopStyleVar(1); // Pop the frame rounding style
+}
+
+void RedBookDisplayPanel()
+{
+
+
+    float totalWidth = ImGui::GetContentRegionAvail().x;
+    float totalHeight = ImGui::GetContentRegionAvail().y;
+    // Detect if the mouse is over this specific child
+    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+        // Only pan if the left mouse button is held down
+        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            ImVec2 delta = ImGui::GetIO().MouseDelta;
+
+            // Apply to your camera/view offsets
+            myWorldMap->dX += delta.x;
+            myWorldMap->dY -= delta.y;
+        }
+
+        float scroll = ImGui::GetIO().MouseWheel;
+        if (scroll != 0.0f) {
+            ImVec2 mouse = ImGui::GetMousePos();
+            ImVec2 windowPos = ImGui::GetWindowPos();
+            ImVec2 windowCursor(mouse.x - windowPos.x, mouse.y - windowPos.y);
+
+			int oldTileSize = myWorldMap->tileSize;
+
+            float zoomFactor = (scroll > 0 ? 1.1f : 0.9f);
+            int newTileSize = clamp(int(oldTileSize * zoomFactor + 0.5), WorldMap::MINIMUM_TILE_SIZE, WorldMap::MAXIMUM_TILE_SIZE);
+
+            float ratio = float(newTileSize) / float(oldTileSize);
+
+            windowCursor.x -= totalWidth / 2;
+            windowCursor.y -= totalHeight / 2;
+            windowCursor.y *= -1;
+            double newDX = myWorldMap->dX * ratio - windowCursor.x * (ratio - 1);
+            double newDY = myWorldMap->dY * ratio - windowCursor.y * (ratio - 1);
+            myWorldMap->dX = newDX;
+            myWorldMap->dY = newDY;
+
+            myWorldMap->tileSize = newTileSize;
+        }
+    }
+
+    if( myWorldMap == nullptr)
+    {
+        ImGui::Text("World map not initialized.");
+        return;
+	}
+	GLuint textureColorbuffer = myWorldMap->Render((int)totalWidth, (int)totalHeight);
+    ImGui::Image((void*)(intptr_t)textureColorbuffer, ImVec2(totalWidth, totalHeight),
+        ImVec2(0, 1), ImVec2(1, 0));
+}
+
+void RedBookToolPanel(float panelWidth)
+{
+    // Fixed panel content
+    ImGui::Text("Fixed right panel");
+}
+
+void RedBookDisplay(int screenWidth, int screenHeight)
+{
+    ImGui::SetNextWindowSize(ImVec2(screenWidth, screenHeight));
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::Begin("Main Panel", nullptr, 
+        ImGuiWindowFlags_NoCollapse | 
+        ImGuiWindowFlags_NoMove | 
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoDecoration
+    );
+    float totalWidth = ImGui::GetContentRegionAvail().x;
+    float totalHeight = ImGui::GetContentRegionAvail().y;
+
+    ImGui::PushStyleColor(ImGuiCol_Text, g_LightBrownTextColor);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, g_GrayBackgroundColor);
+    // ----- Panel 1: Scrollable, auto-width -----
+    ImGui::BeginChild("InfoPanel", ImVec2(300, totalHeight), true);
+
+    RedBookInfoPanel(300.0f);
+    // Save computed width
+    float leftPanelWidth = ImGui::GetWindowSize().x;
+    ImGui::EndChild();
+	ImGui::PopStyleColor(2); // Pop the styles we pushed
+
+    // Line up next panel horizontally
+    ImGui::SameLine();
+
+    float rightPanelWidth = 300.0f;
+    float spacing = ImGui::GetStyle().ItemSpacing.x;
+    float middlePanelWidth = totalWidth - leftPanelWidth - rightPanelWidth - spacing * 2;
+
+    ImGui::BeginChild("DisplayPanel", ImVec2(middlePanelWidth, totalHeight), ImGuiChildFlags_None);
+	RedBookDisplayPanel();
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    ImGui::PushStyleColor(ImGuiCol_Text, g_LightBrownTextColor);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, g_GrayBackgroundColor);
+    ImGui::BeginChild("ToolPanel", ImVec2(rightPanelWidth, totalHeight), true);
+	RedBookToolPanel(rightPanelWidth);
+    ImGui::EndChild();
+	ImGui::PopStyleColor(2); // Pop the styles we pushed
+
+    ImGui::End();
+}
+
+void 
+RedBookInitWorld()
+{
+    myWorldMap = new WorldMap("Nerean Sea");
+    vector<SamplePoint*> vp;
+    myWorldMap->FillAllContinents(0, 0, vp);
+}
+
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -18,6 +240,11 @@ int WINAPI WinMain(
     LPSTR lpCmdLine, 
     int nCmdShow)
 {
+    AllocConsole();
+    FILE* fp;
+    freopen_s(&fp, "CONOUT$", "w", stdout);
+    freopen_s(&fp, "CONOUT$", "w", stderr);
+
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
@@ -52,12 +279,22 @@ int WINAPI WinMain(
 #endif
 
     // Create window with graphics context
+    glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
     float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor()); // Valid on GLFW 3.3+ only
-    GLFWwindow* window = glfwCreateWindow((int)(1280 * main_scale), (int)(800 * main_scale), "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow((int)(1280 * main_scale), (int)(800 * main_scale), "Red Book World Manager", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
+
+
+    // Initialize GLAD
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        std::cout << "Failed to initialize GLAD\n";
+        //return -1;
+    }
+
+    std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -99,11 +336,8 @@ int WINAPI WinMain(
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf");
     //IM_ASSERT(font != nullptr);
 
-    // Our state
-    bool show_demo_window = true;
-    bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
+    RedBookInitWorld();
     while (!glfwWindowShouldClose(window))
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -117,49 +351,16 @@ int WINAPI WinMain(
             ImGui_ImplGlfw_Sleep(10);
             continue;
         }
-
+        
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
+        int fbWidth, fbHeight;
+        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
-
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-            ImGui::End();
-        }
-
-        // 3. Show another simple window.
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
-        }
-
+        RedBookDisplay(fbWidth, fbHeight);
         // Rendering
         ImGui::Render();
         int display_w, display_h;
@@ -172,6 +373,7 @@ int WINAPI WinMain(
         glfwSwapBuffers(window);
     }
 
+    delete myWorldMap;
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
