@@ -49,6 +49,7 @@ WorldMap::~WorldMap()
 		glDeleteTextures(1, &renderTexture);
 
 	outlineRenderer.Cleanup();
+	meshPointRenderer.Cleanup();
 }
 /*public String GetDirectory()
 {
@@ -660,6 +661,73 @@ WorldMap::GetRegionalMapAt(double x, double y, bool createIfNot)
 	return RegionalMap::Coordinate(x, y, found);
 }
 
+void
+WorldMap::RenderMeshPoints(int width, int height, float regionDim)
+{
+	float left = 0.0f;
+	float right = (float)width;
+	float bottom = 0.0f;
+	float top = (float)height;
+	float nearZ = -1.0f;
+	float farZ = 1.0f;
+
+	double mvdScreenSize = RegionalMap::MIN_VORONOI_DIST * regionDim;
+
+	if (mvdScreenSize < 12)
+		return;
+
+	glm::mat4 orthoProj = glm::ortho(left, right, bottom, top, nearZ, farZ);
+	if (!meshPointRenderer.IsInitialized())
+		meshPointRenderer.Init();
+
+	vector<glm::vec2> samplePointLocs;
+	ForEachOnSceenRegionalMap(
+		[&samplePointLocs, regionDim, width, height](RegionalMap* region, float xLoc, float yLoc)
+		{
+			region->GatherSamplePointCenters(regionDim, width, height, xLoc, yLoc, samplePointLocs);
+		}, width, height);
+	meshPointRenderer.Render(samplePointLocs, (float) 6, (float) 0, orthoProj, glm::vec4(0, 0, 0, 1));
+
+	if (mvdScreenSize < 24)
+		return;
+	meshPointRenderer.Render(samplePointLocs, (float)mvdScreenSize, (float)mvdScreenSize - 2, orthoProj, 
+		glm::vec4(1.0f, 186.f/255.f, 0.0f, 1));
+
+}
+
+void 
+WorldMap::RenderOutlines(int width, int height, float regionDim)
+{
+
+	float left = 0.0f;
+	float right = (float) width;
+	float bottom = 0.0f;
+	float top = (float) height;
+	float nearZ = -1.0f;
+	float farZ = 1.0f;
+
+	glm::mat4 orthoProj = glm::ortho(left, right, bottom, top, nearZ, farZ);
+	if (!outlineRenderer.IsInitialized())
+		outlineRenderer.Init();
+
+	int lmSize = this->tileSize;
+	vector<glm::vec2> outlineLocs;
+	ForEachOnSceenRegionalMap(
+		[&outlineLocs, regionDim, lmSize, width, height](RegionalMap* region, float xLoc, float yLoc)
+		{
+			region->GatherLocalMapOutlineLocations(lmSize, width, height, xLoc, yLoc, outlineLocs);
+		}, width, height);
+	outlineRenderer.Render(outlineLocs, (float) tileSize, (float) tileSize, orthoProj, glm::vec4(1, 0, 0, 1));
+
+	outlineLocs.clear();
+	ForEachOnSceenRegionalMap(
+		[&outlineLocs, regionDim, lmSize, width, height](RegionalMap* region, float xLoc, float yLoc)
+		{
+			outlineLocs.push_back(glm::vec2(xLoc, yLoc));
+		}, width, height);
+	outlineRenderer.Render(outlineLocs, regionDim, regionDim, orthoProj, glm::vec4(0, 1, 0, 1));
+}
+
 GLuint
 WorldMap::Render(int width, int height) 
 {
@@ -674,62 +742,19 @@ WorldMap::Render(int width, int height)
 	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	float regionDim = (float)(tileSize * RegionalMap::DIMENSION);
 	// Render your map here...
-	float regionDim = (float) (tileSize * RegionalMap::DIMENSION);
 	if (false)
 	{
 
 	}
 	if (Switches::OUTLINE_MAPS)
 	{
-
-		float left = 0.0f;
-		float right = width;
-		float bottom = 0.0f;
-		float top = height;
-		float nearZ = -1.0f;
-		float farZ = 1.0f;
-
-		glm::mat4 orthoProj = glm::ortho(left, right, bottom, top, nearZ, farZ);
-		if(!outlineRenderer.IsInitialized())
-			outlineRenderer.Init();
-
-
-		float xOrigin = 0.0f, yOrigin = 0.0f;
-		xOrigin += width / 2, yOrigin += height / 2;
-		xOrigin -= 1 * x0 * regionDim; yOrigin -= 1 * y0 * regionDim;
-		xOrigin -= 0.5f * regionDim, yOrigin -= 0.5f * regionDim;
-		xOrigin += dX, yOrigin += dY;
-
-
-		for (int i = 0; i < w; i++)
-		{
-			for (int j = 0; j < h; j++)
-			{
-				bool onscreen = true;
-				if (xOrigin > width)
-					onscreen = false;
-				if (yOrigin > height)
-					onscreen = false;
-				if(xOrigin + regionDim < 0)
-					onscreen = false;
-				if (yOrigin + regionDim < 0)
-					onscreen = false;
-				if(onscreen && regions[i * h + j] != nullptr)
-					outlineRenderer.Render(xOrigin, yOrigin, regionDim, regionDim, orthoProj, glm::vec4(1, 1, 0, 1));
-				yOrigin += regionDim;
-			}
-			xOrigin += regionDim;
-			yOrigin -= h * regionDim;
-		}
-
-
-		//outlineRenderer.Render(5, 5, 10, 10, orthoProj, glm::vec4(1, 1, 0, 1));
-
+		RenderOutlines(width, height, regionDim);
 	}
 	if (Switches::PAINT_VORONOI_CENTERS)
 	{
-
+		RenderMeshPoints(width, height, regionDim);
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);  // Return to default framebuffer

@@ -155,6 +155,7 @@
     <ClInclude Include="MeshConnection.h" />
     <ClInclude Include="MeshMidPoint.h" />
     <ClInclude Include="MeshPoint.h" />
+    <ClInclude Include="MeshPointRendering.h" />
     <ClInclude Include="OutlineRendering.h" />
     <ClInclude Include="Perlin.h" />
     <ClInclude Include="RedBook.h" />
@@ -183,6 +184,7 @@
     <ClCompile Include="MeshConnection.cpp" />
     <ClCompile Include="MeshMidPoint.cpp" />
     <ClCompile Include="MeshPoint.cpp" />
+    <ClCompile Include="MeshPointRendering.cpp" />
     <ClCompile Include="OutlineRendering.cpp" />
     <ClCompile Include="Perlin.cpp" />
     <ClCompile Include="RedBook.cpp" />

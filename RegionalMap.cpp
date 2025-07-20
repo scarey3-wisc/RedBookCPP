@@ -1832,6 +1832,65 @@ RegionalMap::SetPoint(SamplePoint* p)
 	return false;
 }
 
+void
+RegionalMap::GatherSamplePointCenters(float regionalDim, 
+	int screenWidth, int screenHeight, 
+	float myX, float myY,
+	vector<glm::vec2>& pointLocs)
+{
+	double mvdScreenSize = RegionalMap::MIN_VORONOI_DIST * regionalDim;
+	float tol = (float)mvdScreenSize * 0.5f;
+	for (int i = 0; i < voronoiList.size(); i++)
+	{
+		SamplePoint* p = voronoiList[i];
+		double x = p->x - GetWorldX();
+		double y = p->y - GetWorldY();
+		x *= regionalDim;
+		y *= regionalDim;
+		
+		float screenX = (float)x + myX;
+		float screenY = (float)y + myY;
+		if (screenX + tol < 0)
+			continue;
+		if (screenY + tol < 0)
+			continue;
+		if(screenX - tol > screenWidth)
+			continue;
+		if (screenY - tol > screenHeight)
+			continue;
+		pointLocs.push_back(glm::vec2(screenX, screenY));
+	}
+}
+
+void 
+RegionalMap::GatherLocalMapOutlineLocations(
+	int tileD,
+	int screenWidth, int screenHeight,
+	float myX, float myY,
+	vector<glm::vec2>& outlines)
+{
+	float regionDim = DIMENSION * tileD;
+	for (int i = 0; i < DIMENSION; i++)
+	{
+		for (int j = 0; j < DIMENSION; j++)
+		{
+			bool onscreen = true;
+			if (myX > screenWidth)
+				onscreen = false;
+			if (myY > screenHeight)
+				onscreen = false;
+			if (myX + regionDim < 0)
+				onscreen = false;
+			if (myY + regionDim < 0)
+				onscreen = false;
+			if (onscreen && topography[i * DIMENSION + j] != nullptr)
+				outlines.push_back(glm::vec2(myX, myY));
+			myY += tileD;
+		}
+		myX += tileD;
+		myY -= DIMENSION * tileD;
+	}
+}
 /*public void Render(double d, Graphics2D g2)
 {
 	if (!readyToRender)

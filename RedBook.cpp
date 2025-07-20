@@ -27,6 +27,55 @@ ImVec4 g_LightGreyButtonColor = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
 ImVec4 g_MediumGreyButtonColor = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
 ImVec4 g_DarkGreyButtonColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
 
+
+constexpr int SCALE_LABEL_TARGET_WIDTH = 200;
+constexpr int NUM_LABELS = 18;
+constexpr const char* TARGET_SCALE_LABLES[] =
+{
+    "200 Miles",
+    "100 Miles",
+    "50 Miles",
+    "25 Miles",
+    "10 Miles",
+    "5 Miles",
+    "2 Miles",
+    "1 Mile",
+    "1/2 Mile",
+    "1/3 Mile",
+    "1/4 Mile",
+    "1000 Feet",
+    "500 Feet",
+    "200 Feet",
+    "100 Feet",
+    "50 Feet",
+    "20 Feet",
+    "10 Feet"
+};
+constexpr double LABEL_DISTANCES[] =
+{
+    321869,
+    160934,
+    80467.2,
+    40233.6,
+    16093.4,
+    8046.72,
+    3218.69,
+    1609.34,
+    804.672,
+    536.448,
+    406.336,
+    304.8,
+    152.4,
+    60.96,
+    30.48,
+    15.24,
+    6.096,
+    3.048
+};
+
+
+
+
 WorldMap* myWorldMap = nullptr;
 
 
@@ -116,8 +165,6 @@ void RedBookInfoPanel(float panelWidth)
 
 void RedBookDisplayPanel()
 {
-
-
     float totalWidth = ImGui::GetContentRegionAvail().x;
     float totalHeight = ImGui::GetContentRegionAvail().y;
     // Detect if the mouse is over this specific child
@@ -162,8 +209,83 @@ void RedBookDisplayPanel()
         return;
 	}
 	GLuint textureColorbuffer = myWorldMap->Render((int)totalWidth, (int)totalHeight);
+
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+
     ImGui::Image((void*)(intptr_t)textureColorbuffer, ImVec2(totalWidth, totalHeight),
         ImVec2(0, 1), ImVec2(1, 0));
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+
+    double mPerTile = LocalMap::METER_DIM;
+    double mPerPixel = mPerTile / myWorldMap->tileSize;
+    double mInTargetScale = SCALE_LABEL_TARGET_WIDTH * mPerPixel;
+    double mInChosenScale = -1;
+    string chosenScale;
+    for (int i = 0; i < NUM_LABELS; i++)
+    {
+        double mInScale = LABEL_DISTANCES[i];
+        string scaleName = TARGET_SCALE_LABLES[i];
+        if (i == 0 || (abs(mInTargetScale - mInScale) < abs(mInTargetScale - mInChosenScale)))
+        {
+            mInChosenScale = mInScale;
+            chosenScale = scaleName;
+        }
+    }
+    float barWidth = mInChosenScale / mPerPixel;
+
+    ImVec2 textSize = ImGui::CalcTextSize(chosenScale.c_str());
+
+    float h = textSize.y + 15;
+    float w = max(textSize.x, barWidth) + 10;
+
+    pos.x += totalWidth;
+	pos.y += totalHeight;
+    pos.x -= w;
+    pos.y -= h;
+    pos.x -= 10;
+    pos.y -= 10;
+    pos.x += w / 2;
+
+    ImVec2 rectStart(pos.x - 0.5f * textSize.x - 5, pos.y);
+	ImVec2 rectEnd(pos.x + 0.5f * textSize.x + 5, pos.y + textSize.y);
+    drawList->AddRectFilled(rectStart, rectEnd, IM_COL32(255, 255, 255, 255));
+
+	ImVec2 textStart(pos.x - 0.5f * textSize.x, pos.y);
+    drawList->AddText(textStart, IM_COL32(0, 0, 0, 255), chosenScale.c_str());
+
+    pos.y += h / 2;
+    float lineY = h / 2 - 5;
+
+	ImVec2 lineStart(pos.x - 0.5f * barWidth, pos.y + lineY - 2);
+	ImVec2 lineEnd(pos.x + 0.5f * barWidth, pos.y + lineY + 2);
+    drawList->AddRectFilled(lineStart, lineEnd, IM_COL32(255, 187, 0, 255));
+
+    ImVec2 vertLineStart(lineStart.x - 1, pos.y + lineY - 6);
+	ImVec2 vertLineEnd(lineStart.x + 1, pos.y + lineY + 6);
+    drawList->AddRectFilled(vertLineStart, vertLineEnd, IM_COL32(255, 187, 0, 255));
+
+    vertLineStart.x = lineEnd.x - 1;
+	vertLineEnd.x = lineEnd.x + 1;
+    drawList->AddRectFilled(vertLineStart, vertLineEnd, IM_COL32(255, 187, 0, 255));
+
+    vertLineStart.x = pos.x - 1;
+	vertLineEnd.x = pos.x + 1;
+    vertLineStart.y += 2;
+    vertLineEnd.y -= 2;
+    drawList->AddRectFilled(vertLineStart, vertLineEnd, IM_COL32(255, 187, 0, 255));
+
+    /*
+
+    g2.translate(0, h / 2);
+    g2.setColor(Color.orange);
+    int lineY = (int)(h / 2 - 5);
+    g2.fillRect((int)(-0.5 * barWidth - 1), lineY - 6, 2, 12);
+    g2.fillRect(-1, lineY - 4, 2, 8);
+    g2.fillRect((int)(0.5 * barWidth - 1), lineY - 6, 2, 12);
+    g2.setTransform(saved);
+    */
 }
 
 void RedBookToolPanel(float panelWidth)
@@ -174,7 +296,7 @@ void RedBookToolPanel(float panelWidth)
 
 void RedBookDisplay(int screenWidth, int screenHeight)
 {
-    ImGui::SetNextWindowSize(ImVec2(screenWidth, screenHeight));
+    ImGui::SetNextWindowSize(ImVec2((float) screenWidth, (float) screenHeight));
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::Begin("Main Panel", nullptr, 
         ImGuiWindowFlags_NoCollapse | 
@@ -224,7 +346,7 @@ RedBookInitWorld()
 {
     myWorldMap = new WorldMap("Nerean Sea");
     vector<SamplePoint*> vp;
-    myWorldMap->FillAllContinents(0, 0, vp);
+   //myWorldMap->FillAllContinents(0, 0, vp);
 }
 
 
@@ -273,7 +395,7 @@ int WINAPI WinMain(
     // GL 3.0 + GLSL 130
     const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
 #endif

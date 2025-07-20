@@ -4,6 +4,7 @@
 #include "RegionalMap.h"
 #include <glad/glad.h>
 #include "OutlineRendering.h"
+#include "MeshPointRendering.h"
 
 
 class SamplePoint;
@@ -35,6 +36,40 @@ public:
 	GLuint Render(int width, int height);
 
 private:
+
+	template<typename Func>
+	void ForEachOnSceenRegionalMap(Func f, int width, int height)
+	{
+		float regionDim = tileSize * RegionalMap::DIMENSION;
+		float xOrigin = 0.0f, yOrigin = 0.0f;
+		xOrigin += width / 2, yOrigin += height / 2;
+		xOrigin -= 1 * x0 * regionDim; yOrigin -= 1 * y0 * regionDim;
+		xOrigin -= 0.5f * regionDim, yOrigin -= 0.5f * regionDim;
+		xOrigin += (float)dX, yOrigin += (float)dY;
+		for (int i = 0; i < w; i++)
+		{
+			for (int j = 0; j < h; j++)
+			{
+				bool onscreen = true;
+				if (xOrigin > width)
+					onscreen = false;
+				if (yOrigin > height)
+					onscreen = false;
+				if (xOrigin + regionDim < 0)
+					onscreen = false;
+				if (yOrigin + regionDim < 0)
+					onscreen = false;
+				if (onscreen && regions[i * h + j] != nullptr)
+					f(regions[i * h + j], xOrigin, yOrigin);
+				yOrigin += regionDim;
+			}
+			xOrigin += regionDim;
+			yOrigin -= h * regionDim;
+		}
+	}
+	void RenderOutlines(int width, int height, float regionDim);
+	void RenderMeshPoints(int width, int height, float regionDim);
+
 	void InitNewWorld();
 
 	void InitializeRenderTarget(int width, int height);
@@ -58,6 +93,7 @@ private:
 	GLuint frameBuffer = 0;
 	GLuint renderTexture = 0;
 	OutlineRendering outlineRenderer;
+	MeshPointRendering meshPointRenderer;
 
 	bool textureInit = false;
 	int texWidth;
@@ -70,48 +106,5 @@ public:
 	inline static constexpr const char* K_EMPTY_REGION_NAME = "null_region";
 	inline static constexpr const char* K_SAVE_FOLDER_NAME = "Worlds";
 	inline static constexpr const char* K_REGIONS_FOLDER_NAME = "Regions";
-	inline static constexpr int SCALE_LABEL_TARGET_WIDTH = 200;
-	inline static constexpr const char* TARGET_SCALE_LABLES[] =
-	{
-		"200 Miles",
-		"100 Miles",
-		"50 Miles",
-		"25 Miles",
-		"10 Miles",
-		"5 Miles",
-		"2 Miles",
-		"1 Mile",
-		"1/2 Mile",
-		"1/3 Mile",
-		"1/4 Mile",
-		"1000 Feet",
-		"500 Feet",
-		"200 Feet",
-		"100 Feet",
-		"50 Feet",
-		"20 Feet",
-		"10 Feet"
-	};
-	inline static constexpr double LABEL_DISTANCES[] =
-	{
-		321869,
-		160934,
-		80467.2,
-		40233.6,
-		16093.4,
-		8046.72,
-		3218.69,
-		1609.34,
-		804.672,
-		536.448,
-		406.336,
-		304.8,
-		152.4,
-		60.96,
-		30.48,
-		15.24,
-		6.096,
-		3.048
-	};
 };
 

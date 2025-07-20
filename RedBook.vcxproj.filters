@@ -67,11 +67,14 @@
     <ClCompile Include="external\glad\src\glad.c">
       <Filter>external</Filter>
     </ClCompile>
-    <ClCompile Include="OutlineRendering.cpp">
-      <Filter>UserInterface\Source</Filter>
-    </ClCompile>
     <ClCompile Include="RenderUtils.cpp">
       <Filter>UserInterface\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshPointRendering.cpp">
+      <Filter>RenderMethods\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="OutlineRendering.cpp">
+      <Filter>RenderMethods\Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -156,11 +159,14 @@
     <ClInclude Include="RedBookGlobal.h">
       <Filter>Utilities\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="OutlineRendering.h">
-      <Filter>UserInterface\Headers</Filter>
-    </ClInclude>
     <ClInclude Include="RenderUtils.h">
       <Filter>UserInterface\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshPointRendering.h">
+      <Filter>RenderMethods\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="OutlineRendering.h">
+      <Filter>RenderMethods\Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -211,6 +217,15 @@
     </Filter>
     <Filter Include="external">
       <UniqueIdentifier>{7153d13d-b113-4a83-b6f9-cc467bd1eec5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RenderMethods">
+      <UniqueIdentifier>{4500dce9-fc69-4b2e-b727-8d0942727d08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RenderMethods\Source">
+      <UniqueIdentifier>{b914da69-9718-4f70-883c-82eeec0c64fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RenderMethods\Headers">
+      <UniqueIdentifier>{4666828e-6f82-49bd-997f-00ae958246b0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

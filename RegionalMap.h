@@ -52,6 +52,17 @@ public:
 	int GetWorldY() { return y + ORIGIN_OFFSET; }
 	void EnableRendering() { readyToRender = true; }
 
+	void GatherLocalMapOutlineLocations(
+		int tileD,
+		int screenWidth, int screenHeight,
+		float myX, float myY,
+		std::vector<glm::vec2>& outlines);
+	void GatherSamplePointCenters(
+		float regionalDim,
+		int screenWidth, int screenHeight,
+		float myX, float myY,
+		std::vector<glm::vec2>& pointLocs);
+
 	const std::vector<SamplePoint*>& GetAllPoints() { return voronoiList; }
 	SamplePoint* GetAt(int i, int j) { return terrainCells[i * VORONOI_DIM + j]; }
 	bool SetPoint(SamplePoint* p);
