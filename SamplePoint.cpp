@@ -585,6 +585,26 @@ SamplePoint::GetPerlinElevDiffs()
 		return vector<double>{1, 0};
 }
 
+glm::vec3 
+SamplePoint::GetTerrainBasedColor()
+{
+	if(type.IsTerrainOfType(TerrainTemplate::OCEAN))
+		return glm::vec3(14./255, 21./255, 110./255);
+	if (type.IsTerrainOfType(TerrainTemplate::LAKE) && !type.IsTerrainOfType(TerrainTemplate::FLAT))
+		return glm::vec3(71./255, 94./255, 99./255);
+	if (type.IsTerrainOfType(TerrainTemplate::PEAKS))
+		return glm::vec3(171./255, 156./255, 135./255);
+	if (type.IsTerrainOfType(TerrainTemplate::MOUNTAINS))
+		return glm::vec3(148./255, 126./255, 40./255);
+	if (type.IsTerrainOfType(TerrainTemplate::HILLS))
+		return glm::vec3(156./255, 158./255, 93./255);
+	if (type.IsTerrainOfType(TerrainTemplate::LAKE))
+		return glm::vec3(18./255, 146./255, 201./255);
+	if (type.IsTerrainOfType(TerrainTemplate::FLAT))
+		return glm::vec3(124./255, 166./255, 88./255);
+	return glm::vec3(1.0, 0.0, 0.0);
+}
+
 bool
 SamplePoint::IsInlandLake() {
 	if (IsOcean())

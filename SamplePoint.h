@@ -36,6 +36,7 @@ public:
 	void MakeLake();
 	void MakeOcean();
 	void AssignVoronoiTerrainType();
+	glm::vec3 GetTerrainBasedColor();
 
 	double GetMaxGrade() { return maxGrade; }
 	double GetBaseSedimentDepth();

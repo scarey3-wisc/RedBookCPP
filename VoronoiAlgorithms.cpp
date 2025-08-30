@@ -340,7 +340,7 @@ VoronoiAlgorithms::FindContainingTriangle(double x, double y, SamplePoint* seed)
 	while (curr[0] != nullptr)
 	{
 		bool subtriangleFound = false;
-		glm::dvec2 coords = BarycentricCoordinates(x, y, curr);
+		glm::dvec3 coords = BarycentricCoordinates(x, y, curr);
 		for (int i = 0; i < 3; i++)
 		{
 			if (coords[i] >= 0.5)

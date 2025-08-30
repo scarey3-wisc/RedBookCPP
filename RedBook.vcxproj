@@ -109,6 +109,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -129,6 +130,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -140,6 +142,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DataImage.h" />
+    <ClInclude Include="DataImageSize.h" />
+    <ClInclude Include="DataRasterManager.h" />
     <ClInclude Include="external\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="external\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="external\imgui\backends\imgui_impl_opengl3_loader.h" />
@@ -150,6 +155,8 @@
     <ClInclude Include="external\imgui\imstb_textedit.h" />
     <ClInclude Include="external\imgui\imstb_truetype.h" />
     <ClInclude Include="GlobalRand.h" />
+    <ClInclude Include="HashUtils.h" />
+    <ClInclude Include="Heightmap.h" />
     <ClInclude Include="LocalMap.h" />
     <ClInclude Include="MathToolkit.h" />
     <ClInclude Include="MeshConnection.h" />
@@ -160,13 +167,16 @@
     <ClInclude Include="Perlin.h" />
     <ClInclude Include="RedBook.h" />
     <ClInclude Include="RedBookGlobal.h" />
+    <ClInclude Include="RegionalDataLoc.h" />
     <ClInclude Include="RegionalMap.h" />
     <ClInclude Include="RenderUtils.h" />
     <ClInclude Include="SamplePoint.h" />
     <ClInclude Include="Switches.h" />
     <ClInclude Include="TerrainTemplate.h" />
     <ClInclude Include="TerrainType.h" />
+    <ClInclude Include="Timer.h" />
     <ClInclude Include="VoronoiAlgorithms.h" />
+    <ClInclude Include="VoronoiRendering.h" />
     <ClInclude Include="WaterDroplet.h" />
     <ClInclude Include="WatermapValue.h" />
     <ClInclude Include="WorldMap.h" />
@@ -180,6 +190,7 @@
     <ClCompile Include="external\imgui\imgui_draw.cpp" />
     <ClCompile Include="external\imgui\imgui_tables.cpp" />
     <ClCompile Include="external\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Heightmap.cpp" />
     <ClCompile Include="LocalMap.cpp" />
     <ClCompile Include="MeshConnection.cpp" />
     <ClCompile Include="MeshMidPoint.cpp" />
@@ -195,6 +206,7 @@
     <ClCompile Include="TerrainTemplate.cpp" />
     <ClCompile Include="TerrainType.cpp" />
     <ClCompile Include="VoronoiAlgorithms.cpp" />
+    <ClCompile Include="VoronoiRendering.cpp" />
     <ClCompile Include="WaterDroplet.cpp" />
     <ClCompile Include="WorldMap.cpp" />
   </ItemGroup>

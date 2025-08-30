@@ -3,11 +3,11 @@
 #include <glad/glad.h>
 #include <glm.hpp>
 #include <vector>
-class MeshPointRendering
+class VoronoiRendering
 {
 public:
     void Init();
-    void Render(std::vector<glm::vec2>& locs, float radius, float innerRadius, const glm::mat4& viewProj, const glm::vec4& color);
+    void Render(std::vector<glm::vec2>& locs, std::vector<glm::vec3>& colors, float range, const glm::mat4& viewProj);
     void Cleanup();
     bool IsInitialized() const { return initialzed; }
 private:
@@ -16,4 +16,5 @@ private:
     GLuint vbo = 0;
     GLuint shaderProgram = 0;
     GLuint instanceVBO = 0;
+    GLuint colorVBO = 0;
 };

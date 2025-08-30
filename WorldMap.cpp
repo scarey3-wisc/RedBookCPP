@@ -14,7 +14,8 @@
 using namespace std;
 WorldMap::WorldMap(const char* name) : 
 	worldName(name), FileAvaiable(true), regions(nullptr),
-	x0(0), y0(0), w(1), h(1), dX(0), dY(0), texWidth(0), texHeight(0)
+	x0(0), y0(0), w(1), h(1), dX(0), dY(0), texWidth(0), texHeight(0),
+	heightmaps(400, this)
 {
 	tileSize = DEFAULT_TILE_SIZE;
 	InitNewWorld();
@@ -50,6 +51,7 @@ WorldMap::~WorldMap()
 
 	outlineRenderer.Cleanup();
 	meshPointRenderer.Cleanup();
+	voronoiRenderer.Cleanup();
 }
 /*public String GetDirectory()
 {
@@ -552,6 +554,7 @@ WorldMap::ExpandEmptySpace(int posXInc, int negXInc, int posYInc, int negYInc)
 	h = newH;
 	x0 = newX0;
 	y0 = newY0;
+	delete regions;
 	regions = newRegions;
 	//SaveRegionGridInfo();
 }
@@ -608,20 +611,6 @@ public void DettachActiveTool()
 		if (!activeTool.ZoomOkay())
 			StartListeningToZoom();
 	}
-}
-public void StartListeningToZoom()
-{
-	StopListeningToZoom();
-	myZoom = new ZoomUpdater();
-	addMouseWheelListener(myZoom);
-}
-public void StopListeningToZoom()
-{
-	if (myZoom != null)
-	{
-		removeMouseWheelListener(myZoom);
-		myZoom = null;
-	}
 }*/
 RegionalMap::Coordinate 
 WorldMap::GetRegionalMapAt(double x, double y)
@@ -659,6 +648,57 @@ WorldMap::GetRegionalMapAt(double x, double y, bool createIfNot)
 	y /= regionDim;
 
 	return RegionalMap::Coordinate(x, y, found);
+}
+
+void
+WorldMap::RenderVoronoiTiles(int width, int height, float regionDim, bool terrainBased)
+{
+	float left = 0.0f;
+	float right = (float)width;
+	float bottom = 0.0f;
+	float top = (float)height;
+	float nearZ = -1.0f;
+	float farZ = 1.0f;
+
+	float mvdScreenSize = (float) RegionalMap::MIN_VORONOI_DIST * regionDim;
+
+	glm::mat4 orthoProj = glm::ortho(left, right, bottom, top, nearZ, farZ);
+	if (!voronoiRenderer.IsInitialized())
+		voronoiRenderer.Init();
+
+	vector<glm::vec2> samplePointLocs;
+	vector<glm::vec3> samplePointColors;
+	ForEachOnSceenRegionalMap(
+		[&samplePointLocs, &samplePointColors, terrainBased, regionDim, width, height]
+		(RegionalMap* region, float xLoc, float yLoc)
+		{
+			region->GatherSamplePointCenters(regionDim, width, height, xLoc, yLoc, samplePointLocs);
+			region->GatherSamplePointColors(regionDim, width, height, xLoc, yLoc, samplePointColors, terrainBased);
+		}, width, height);
+	voronoiRenderer.Render(samplePointLocs, samplePointColors, mvdScreenSize * 3, orthoProj);
+
+}
+
+
+void
+WorldMap::RenderRegionalData(int width, int height, float regionDim)
+{
+	float left = 0.0f;
+	float right = (float)width;
+	float bottom = 0.0f;
+	float top = (float)height;
+	float nearZ = -1.0f;
+	float farZ = 1.0f;
+
+	glm::mat4 orthoProj = glm::ortho(left, right, bottom, top, nearZ, farZ);
+
+	ForEachOnSceenRegionalMap(
+		[this, regionDim, width, height](RegionalMap* region, float xLoc, float yLoc)
+		{
+			RegionalDataLoc loc(region->GetWorldX(), region->GetWorldY(), 0, 0, 1);
+			Heightmap hm = heightmaps.GetRaster(loc);
+		}, width, height);
+
 }
 
 void
@@ -744,9 +784,17 @@ WorldMap::Render(int width, int height)
 
 	float regionDim = (float)(tileSize * RegionalMap::DIMENSION);
 	// Render your map here...
-	if (false)
+	if (Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::TERRAIN)
 	{
-
+		RenderVoronoiTiles(width, height, regionDim, true);
+	}
+	else if (Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::VORONOI_PURE)
+	{
+		RenderVoronoiTiles(width, height, regionDim, false);
+	}
+	else if(Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::ELEVATION_CURR)
+	{
+		
 	}
 	if (Switches::OUTLINE_MAPS)
 	{
@@ -780,144 +828,12 @@ WorldMap::InitializeRenderTarget(int width, int height)
 	// Create texture to render to
 	glGenTextures(1, &renderTexture);
 	glBindTexture(GL_TEXTURE_2D, renderTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
-		GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		GL_TEXTURE_2D, renderTexture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D, renderTexture, 0);
 
+	glGenTextures(1, &depthBuffer);
+	glBindTexture(GL_TEXTURE_2D, depthBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
 }
-
-/*
-
-
-public synchronized void ZoomIn(int mouseX, int mouseY)
-{
-	double proposedZoom = 1.1 * tileSize;
-	if (proposedZoom > MAXIMUM_TILE_SIZE)
-		return;
-	int actualZoom = (int)(proposedZoom + 0.5);
-	double actualRatio = 1.0 * actualZoom / tileSize;
-	tileSize = actualZoom;
-	AdjustDeltas(mouseX, mouseY, actualRatio);
-}
-public synchronized void ZoomOut(int mouseX, int mouseY)
-{
-	double proposedZoom = tileSize / 1.1;
-	if (proposedZoom < MINIMUM_TILE_SIZE)
-		return;
-	int actualZoom = (int)proposedZoom;
-	double actualRatio = 1.0 * actualZoom / tileSize;
-	tileSize = actualZoom;
-	AdjustDeltas(mouseX, mouseY, actualRatio);
-}
-private void AdjustDeltas(int mouseX, int mouseY, double ratio)
-{
-	mouseX -= getWidth() / 2;
-	mouseY -= getHeight() / 2;
-	double newDX = dX * ratio - mouseX * (ratio - 1);
-	double newDY = dY * ratio - mouseY * (ratio - 1);
-	dX = newDX;
-	dY = newDY;
-}
-public synchronized long Render()
-{
-	BufferedImage buffer = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
-	Graphics2D g2 = buffer.createGraphics();
-	double regionDim = tileSize * RegionalMap.DIMENSION;
-	g2.setColor(Color.black);
-	g2.fillRect(0, 0, getWidth(), getHeight());
-	g2.setClip(0, 0, getWidth(), getHeight());
-	AffineTransform saved = g2.getTransform();
-	g2.translate(getWidth() / 2, getHeight() / 2);
-	g2.translate(-1 * x0 * regionDim, -1 * y0 * regionDim);
-	g2.translate(-0.5 * regionDim, -0.5 * regionDim);
-	g2.translate(dX, dY);
-	for (int i = 0; i < w; i++)
-	{
-		for (int j = 0; j < h; j++)
-		{
-			if (g2.hitClip(0, 0, (int)regionDim, (int)regionDim))
-			{
-				RegionalMap m = regions[i][j];
-				if (m != null)
-					m.Render(regionDim, g2);
-			}
-
-			g2.translate(0, regionDim);
-		}
-		g2.translate(regionDim, -1 * h * regionDim);
-	}
-	RenderQueue.IncrementFrameID();
-	g2.setTransform(saved);
-	RenderScale(g2);
-	Graphics g = getGraphics();
-	if (g == null)
-		return 10l;
-	g.drawImage(buffer, 0, 0, null);
-	return 10l;
-}
-private void RenderScale(Graphics2D g2)
-{
-	double mPerTile = LocalMap.METER_DIM;
-	double mPerPixel = mPerTile / tileSize;
-	double mInTargetScale = SCALE_LABEL_TARGET_WIDTH * mPerPixel;
-	double mInChosenScale = -1;
-	String chosenScale = "";
-	for (int i = 0; i < LABEL_DISTANCES.length; i++)
-	{
-		double mInScale = LABEL_DISTANCES[i];
-		String scaleName = TARGET_SCALE_LABLES[i];
-		if (i == 0 || (Math.abs(mInTargetScale - mInScale) < Math.abs(mInTargetScale - mInChosenScale)))
-		{
-			mInChosenScale = mInScale;
-			chosenScale = scaleName;
-		}
-	}
-	Font f = new Font("Calibri", Font.BOLD, 18);
-	//Font f = g2.getFont().deriveFont(Font.BOLD, 16);
-	g2.setFont(f);
-	double barWidth = mInChosenScale / mPerPixel;
-	int textWidth = g2.getFontMetrics().stringWidth(chosenScale);
-
-	int h = g2.getFontMetrics().getHeight() + 15;
-	int w = (int)Math.max(textWidth, barWidth) + 10;
-
-	AffineTransform saved = g2.getTransform();
-	g2.translate(getWidth(), getHeight());
-	g2.translate(-1 * w, -1 * h);
-	g2.translate(-10, -10);
-	g2.translate(w / 2, 0);
-	g2.setColor(Color.white);
-	g2.fillRect((int)(-0.5 * textWidth - 5), 0, textWidth + 10, g2.getFontMetrics().getHeight());
-	g2.setColor(Color.black);
-	g2.drawString(chosenScale, (int)(-0.5 * textWidth), (int)(0.75 * g2.getFontMetrics().getHeight()));
-	g2.translate(0, h / 2);
-	g2.setColor(Color.orange);
-	int lineY = (int)(h / 2 - 5);
-	g2.fillRect((int)(-0.5 * barWidth), lineY - 2, (int)(barWidth), 4);
-	g2.fillRect((int)(-0.5 * barWidth - 1), lineY - 6, 2, 12);
-	g2.fillRect(-1, lineY - 4, 2, 8);
-	g2.fillRect((int)(0.5 * barWidth - 1), lineY - 6, 2, 12);
-	g2.setTransform(saved);
-}
-private class ZoomUpdater implements MouseWheelListener
-{
-
-	@Override
-		public void mouseWheelMoved(MouseWheelEvent e) {
-		int rots = e.getWheelRotation();
-		if (rots < 0)
-			for (int i = 0; i < rots * -1; i++)
-				ZoomIn(e.getX(), e.getY());
-		else
-			for (int i = 0; i < rots; i++)
-				ZoomOut(e.getX(), e.getY());
-	}
-}
-
-
-
-
-*/
-

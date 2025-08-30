@@ -13,6 +13,8 @@
 #include "WorldMap.h"
 #include "SamplePoint.h"
 #include <algorithm>
+#include "VoronoiAlgorithms.h"
+#include <chrono>
 
 using namespace std;
 using namespace RedBook;
@@ -27,6 +29,7 @@ ImVec4 g_LightGreyButtonColor = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
 ImVec4 g_MediumGreyButtonColor = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
 ImVec4 g_DarkGreyButtonColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
 
+double renderTimeMovingAverage = 15.0;
 
 constexpr int SCALE_LABEL_TARGET_WIDTH = 200;
 constexpr int NUM_LABELS = 18;
@@ -78,6 +81,14 @@ constexpr double LABEL_DISTANCES[] =
 
 WorldMap* myWorldMap = nullptr;
 
+
+#include "Heightmap.h"
+
+void StartupTests()
+{
+    HeightmapManager manager(2, myWorldMap);
+    Heightmap h = manager.GetRaster(RegionalDataLoc(RegionalMap::ORIGIN_OFFSET, RegionalMap::ORIGIN_OFFSET, 0, 0, 1));
+}
 
 void RedBookInfoPanel(float panelWidth)
 {
@@ -208,14 +219,34 @@ void RedBookDisplayPanel()
         ImGui::Text("World map not initialized.");
         return;
 	}
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	GLuint textureColorbuffer = myWorldMap->Render((int)totalWidth, (int)totalHeight);
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
     ImVec2 pos = ImGui::GetCursorScreenPos();
 
     ImGui::Image((void*)(intptr_t)textureColorbuffer, ImVec2(totalWidth, totalHeight),
         ImVec2(0, 1), ImVec2(1, 0));
 
+    double milis = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+
+    double deltaAverageSmoothness = 0.02;
+    renderTimeMovingAverage = (1.0 * (1.0 - deltaAverageSmoothness) * renderTimeMovingAverage + 
+        deltaAverageSmoothness * milis);
+
+	int fps = (int) (1000.0 / renderTimeMovingAverage);
+	string fpsText = "FPS: " + to_string(fps) + " (" + to_string((int) renderTimeMovingAverage) + " ms)";
+
     ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+
+    ImVec2 fpsTextSize = ImGui::CalcTextSize(fpsText.c_str());
+
+    ImVec2 fpsRectEnd(pos.x + fpsTextSize.x + 6, pos.y + fpsTextSize.y + 4);
+    drawList->AddRectFilled(pos, fpsRectEnd, IM_COL32(255, 255, 255, 255));
+
+    drawList->AddText(ImVec2(pos.x + 3, pos.y + 2), IM_COL32(0, 0, 0, 255), fpsText.c_str());
 
 
     double mPerTile = LocalMap::METER_DIM;
@@ -233,7 +264,7 @@ void RedBookDisplayPanel()
             chosenScale = scaleName;
         }
     }
-    float barWidth = mInChosenScale / mPerPixel;
+    float barWidth = (float) (mInChosenScale / mPerPixel);
 
     ImVec2 textSize = ImGui::CalcTextSize(chosenScale.c_str());
 
@@ -275,17 +306,6 @@ void RedBookDisplayPanel()
     vertLineStart.y += 2;
     vertLineEnd.y -= 2;
     drawList->AddRectFilled(vertLineStart, vertLineEnd, IM_COL32(255, 187, 0, 255));
-
-    /*
-
-    g2.translate(0, h / 2);
-    g2.setColor(Color.orange);
-    int lineY = (int)(h / 2 - 5);
-    g2.fillRect((int)(-0.5 * barWidth - 1), lineY - 6, 2, 12);
-    g2.fillRect(-1, lineY - 4, 2, 8);
-    g2.fillRect((int)(0.5 * barWidth - 1), lineY - 6, 2, 12);
-    g2.setTransform(saved);
-    */
 }
 
 void RedBookToolPanel(float panelWidth)
@@ -346,7 +366,12 @@ RedBookInitWorld()
 {
     myWorldMap = new WorldMap("Nerean Sea");
     vector<SamplePoint*> vp;
-   //myWorldMap->FillAllContinents(0, 0, vp);
+    myWorldMap->FillAllContinents(0, 0, vp);
+    StartupTests();
+
+    vector<SamplePoint*> coastal = VoronoiAlgorithms::FindBoundaryPoints(vp, TerrainTemplate::OCEAN);
+    VoronoiAlgorithms::ConvertSeasToLakes(coastal, Switches::MAX_SAMPLE_POINTS_IN_LAKE);
+    VoronoiAlgorithms::ConvertCoastalLakeToOcean(vp);
 }
 
 

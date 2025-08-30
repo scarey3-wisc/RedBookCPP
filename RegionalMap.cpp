@@ -878,7 +878,10 @@ RegionalMap::ScrollOriginOffsetForOptimalCoastliness()
 				double x = 1.0 * i / DIMENSION + modifiedOffset;
 				double y = 1.0 * j / DIMENSION + modifiedOffset;
 				if (Perlin::oceans.UnderThreshold(x, y))
+				{
 					numTiles++;
+
+				}
 			}
 		}
 		if (numTiles > numLandTilesInBest)
@@ -1360,6 +1363,24 @@ RegionalMap::RunFullRain()
 		lm.first->CompleteEditing(true, true, true, !lm.second);
 	}
 }
+
+
+/*
+* A Note on Coordinates!
+* In many of the following functions, you will see that the input coordinates
+* are "world coordinates", meaning that each integer step is one full LOCAL map.
+* Furthermore, a regional map's coordinates are offset by the origin offset.
+* So the world coordinates of the central regional map might go from something like
+* 547 * 16 to 547 * 16 + 15.999999. When sampling a perlin function, we assume that
+* each regional map is 1x1. So to get perlin input coordinates, we divide the world
+* coordinate by 16 - then we're going from 547 to 547.999999.
+* Meanwhile, LocalMaps have Local Coordinates, where everything is between 0 and 1.
+* So we frequently go from Local Coordinates to World Coordinates by simply adding
+* the Local Coordinate, the Local Map's coordinate within its Regional Map, and 16
+* times the Regional Map's coordinate within the World Map.
+
+*/
+
 double 
 RegionalMap::GetElevation(double wX, double wY)
 {
@@ -1564,7 +1585,7 @@ RegionalMap::CalculateElevation(double wX, double wY)
 
 	double elev = 0;
 	glm::dvec3 lerp = VoronoiAlgorithms::BarycentricCoordinates(xb, yb, triangle);
-	double perlinContribs[Perlin::elevDeltaLength];
+	double perlinContribs[Perlin::elevDeltaLength] = {};
 	for (int i = 0; i < 3; i++)
 	{
 		double elevCont = triangle[i]->GetElevation();
@@ -1833,13 +1854,47 @@ RegionalMap::SetPoint(SamplePoint* p)
 }
 
 void
+RegionalMap::GatherSamplePointColors(float regionalDim,
+	int screenWidth, int screenHeight,
+	float myX, float myY,
+	vector<glm::vec3>& pointColors,
+	bool terrainColors)
+{
+	double mvdScreenSize = RegionalMap::MIN_VORONOI_DIST * regionalDim;
+	float tol = (float)mvdScreenSize * 1.5f;
+	for (int i = 0; i < voronoiList.size(); i++)
+	{
+		SamplePoint* p = voronoiList[i];
+		double x = p->x - GetWorldX();
+		double y = p->y - GetWorldY();
+		x *= regionalDim;
+		y *= regionalDim;
+
+		float screenX = (float)x + myX;
+		float screenY = (float)y + myY;
+		if (screenX + tol < 0)
+			continue;
+		if (screenY + tol < 0)
+			continue;
+		if (screenX - tol > screenWidth)
+			continue;
+		if (screenY - tol > screenHeight)
+			continue;
+		if(terrainColors)
+			pointColors.push_back(p->GetTerrainBasedColor());
+		else
+			pointColors.push_back(p->myColor);
+	}
+}
+
+void
 RegionalMap::GatherSamplePointCenters(float regionalDim, 
 	int screenWidth, int screenHeight, 
 	float myX, float myY,
 	vector<glm::vec2>& pointLocs)
 {
 	double mvdScreenSize = RegionalMap::MIN_VORONOI_DIST * regionalDim;
-	float tol = (float)mvdScreenSize * 0.5f;
+	float tol = (float)mvdScreenSize * 1.5f;
 	for (int i = 0; i < voronoiList.size(); i++)
 	{
 		SamplePoint* p = voronoiList[i];
@@ -1869,7 +1924,7 @@ RegionalMap::GatherLocalMapOutlineLocations(
 	float myX, float myY,
 	vector<glm::vec2>& outlines)
 {
-	float regionDim = DIMENSION * tileD;
+	float regionDim = (float) (DIMENSION * tileD);
 	for (int i = 0; i < DIMENSION; i++)
 	{
 		for (int j = 0; j < DIMENSION; j++)

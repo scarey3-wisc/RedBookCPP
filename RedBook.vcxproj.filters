@@ -76,6 +76,12 @@
     <ClCompile Include="OutlineRendering.cpp">
       <Filter>RenderMethods\Source</Filter>
     </ClCompile>
+    <ClCompile Include="VoronoiRendering.cpp">
+      <Filter>RenderMethods\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Heightmap.cpp">
+      <Filter>RegionalData\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\imgui\imconfig.h">
@@ -167,6 +173,30 @@
     </ClInclude>
     <ClInclude Include="OutlineRendering.h">
       <Filter>RenderMethods\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="VoronoiRendering.h">
+      <Filter>RenderMethods\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="DataImage.h">
+      <Filter>LocalData\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="DataImageSize.h">
+      <Filter>LocalData\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="DataRasterManager.h">
+      <Filter>RegionalData\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HashUtils.h">
+      <Filter>Utilities\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Heightmap.h">
+      <Filter>RegionalData\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
+      <Filter>Utilities\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="RegionalDataLoc.h">
+      <Filter>RegionalData\Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -299,16 +299,19 @@ double
 Perlin::DotGridGradientForPerlin(int ix, int iy, double x, double y) const
 {
 	double gx = 0, gy = 0;
-	uint32_t lx = (uint32_t) x, ly = (uint32_t) iy;
-	lx += 0x80000000;
-	ly += 0x80000000;
+	uint32_t lx = (uint32_t) ix, ly = (uint32_t) iy;
+	//lx += 0x80000000;
+	//ly += 0x80000000;
 	//lx = ix < 0 ? Integer.MAX_VALUE + ix : ix;
 	//ly = iy < 0 ? Integer.MAX_VALUE + iy : iy;
-	minstd_rand randOne(0xffffffff - lx);
+	minstd_rand randOne(lx << 16 | lx >> 16);
 	minstd_rand randTwo(ly);
-	uint32_t realSeed = randOne() ^ randTwo() ^ seed;
+	uint32_t seedX = randOne();
+	uint32_t seedY = randTwo();
+	uint32_t realSeed = seedX ^ seedY ^ seed;
 
 	minstd_rand newRand(realSeed);
+	newRand.discard(5);
 	uniform_real_distribution dist(0.0, 1.0);
 	double theta = 2 * numbers::pi * dist(newRand);
 	gx = (double) sin(theta);
@@ -338,15 +341,16 @@ Perlin::GradDotGridGradientForPerlin(int ix, int iy, double x, double y) const
 	double theta = 2 * numbers::pi * dist(newRand);
 	gx = (double) sin(theta);
 	gy = (double) cos(theta);
-	return glm::dvec2(gx, gy);
+	return glm::dvec2(0, 0);
 }
 
 //------------------------------------------------------------------------------
 
 //Determines where land is
-const Perlin Perlin::oceans(1.1, 0.0, 10, 1.8, -0.3, false); //0.18 for continents, 1.1 for islands
+const Perlin Perlin::oceans(0.88, 0.0, 10, 1.8, -0.3, false); //0.144 for continents, 0.88 for islands
+
 //Draws strips of mountains
-const Perlin Perlin::mountains(0.3, 0, 8, 1.8, 0.036, true); //previously: 0.052
+const Perlin Perlin::mountains(0.24, 0, 8, 1.8, 0.036, true); //previously: 0.052
 
 //Marks the center of mountain strips as high peaks
 const Perlin Perlin::peaks(Perlin::mountains, 0.007, true); //previously: 0.01
@@ -355,35 +359,35 @@ const Perlin Perlin::peaks(Perlin::mountains, 0.007, true); //previously: 0.01
 const Perlin Perlin::foothills(Perlin::mountains, 0.073, true); //previously: 0.09
 
 //Draws blobs of hills
-const Perlin Perlin::randomHills(9.4, 0, 7, 2, 0.18, false);
+const Perlin Perlin::randomHills(7.52, 0, 7, 2, 0.18, false);
 
 //Draws random lakes; increasing the threshold decreases the size
-const Perlin Perlin::randomLakes(1.1, 0, 7, 2, 0.46, false);
+const Perlin Perlin::randomLakes(0.88, 0, 7, 2, 0.46, false);
 
 //Cuts through mountain strips, demoting peaks to mountains, mountains to foothills, and foothills to flatland
-const Perlin Perlin::randomPasses(2.2, 0, 6, 2, 0.03, true);
+const Perlin Perlin::randomPasses(1.76, 0, 6, 2, 0.03, true);
 
 //Determines how aggressively we climb
-const Perlin Perlin::minMaxSelector(33.8, 0, 4, 1.8, 0, false);
+const Perlin Perlin::minMaxSelector(27.04, 0, 4, 1.8, 0, false);
 
 //Adjusts Tectonic Uplift Values
-const Perlin Perlin::upliftAdjust(4.5, 0, 10, 2, 0, false);
+const Perlin Perlin::upliftAdjust(3.6, 0, 10, 2, 0, false);
 
 //Pushes Terrain around a bit to destroy crisp lines
-const Perlin Perlin::blurX(100, 0, 4, 2, 0, false);
-const Perlin Perlin::blurY(100, 0, 4, 2, 0, false);
+const Perlin Perlin::blurX(80, 0, 4, 2, 0, false);
+const Perlin Perlin::blurY(80, 0, 4, 2, 0, false);
 
-const Perlin Perlin::terra_incognita(0.1, 0, 3, 2);
+const Perlin Perlin::terra_incognita(0.16, 0, 3, 2);
 
 //During erosion simulation, determines how easily the ground erodes
-const Perlin Perlin::sedimentStepDelta(43, 0, 4, 1.8, 0, false);
-const Perlin Perlin::sedimentStepMask(57, 0, 6, 1.8, 0.23, true);
+const Perlin Perlin::sedimentStepDelta(34.4, 0, 4, 1.8, 0, false);
+const Perlin Perlin::sedimentStepMask(45.6, 0, 6, 1.8, 0.23, true);
 
 //some functions to push the terrain a bit more
-const Perlin Perlin::rockyJitters(250, 0, 4, 2, 0, false);
+const Perlin Perlin::rockyJitters(125, 0, 4, 2, 0, false);
 
-const Perlin Perlin::mountainHeightDelta(215, 0, 6, 2.2, 0, false);
-const Perlin Perlin::plainsHeightDelta(110, 0, 6, 2, 0, false);
+const Perlin Perlin::mountainHeightDelta(172, 0, 6, 2.2, 0, false);
+const Perlin Perlin::plainsHeightDelta(88, 0, 6, 2, 0, false);
 const Perlin Perlin::elevDeltas[2] = { Perlin::plainsHeightDelta, Perlin::mountainHeightDelta };
 
 //------------------------------------------------------------------------------

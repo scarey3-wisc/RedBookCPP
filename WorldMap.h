@@ -5,6 +5,8 @@
 #include <glad/glad.h>
 #include "OutlineRendering.h"
 #include "MeshPointRendering.h"
+#include "VoronoiRendering.h"
+#include "Heightmap.h"
 
 
 class SamplePoint;
@@ -40,7 +42,7 @@ private:
 	template<typename Func>
 	void ForEachOnSceenRegionalMap(Func f, int width, int height)
 	{
-		float regionDim = tileSize * RegionalMap::DIMENSION;
+		float regionDim = (float) (tileSize * RegionalMap::DIMENSION);
 		float xOrigin = 0.0f, yOrigin = 0.0f;
 		xOrigin += width / 2, yOrigin += height / 2;
 		xOrigin -= 1 * x0 * regionDim; yOrigin -= 1 * y0 * regionDim;
@@ -67,6 +69,9 @@ private:
 			yOrigin -= h * regionDim;
 		}
 	}
+
+	void RenderRegionalData(int width, int height, float regionDim);
+	void RenderVoronoiTiles(int width, int height, float regionDim, bool terrainBased);
 	void RenderOutlines(int width, int height, float regionDim);
 	void RenderMeshPoints(int width, int height, float regionDim);
 
@@ -79,6 +84,7 @@ public:
 
 	double dX, dY;
 	int tileSize;
+	HeightmapManager heightmaps;
 
 private:
 	int x0, y0; //which cell in regions counts as "0,0"? This may change as we expand!
@@ -92,8 +98,10 @@ private:
 private:
 	GLuint frameBuffer = 0;
 	GLuint renderTexture = 0;
+	GLuint depthBuffer = 0;
 	OutlineRendering outlineRenderer;
 	MeshPointRendering meshPointRenderer;
+	VoronoiRendering voronoiRenderer;
 
 	bool textureInit = false;
 	int texWidth;

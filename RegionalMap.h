@@ -62,6 +62,12 @@ public:
 		int screenWidth, int screenHeight,
 		float myX, float myY,
 		std::vector<glm::vec2>& pointLocs);
+	void GatherSamplePointColors(
+		float regionalDim,
+		int screenWidth, int screenHeight,
+		float myX, float myY,
+		std::vector<glm::vec3>& pointColors,
+		bool terrainColors);
 
 	const std::vector<SamplePoint*>& GetAllPoints() { return voronoiList; }
 	SamplePoint* GetAt(int i, int j) { return terrainCells[i * VORONOI_DIM + j]; }
@@ -94,9 +100,9 @@ public:
 
 	static void ScrollOriginOffsetForOptimalCoastliness();
 
-	inline static constexpr int VORONOI_DIM = 240;
+	inline static constexpr int VORONOI_DIM = 192;
 	inline static constexpr double MIN_VORONOI_DIST = 1.41421356237 / VORONOI_DIM;
-	inline static constexpr int DIMENSION = 20;
+	inline static constexpr int DIMENSION = 16;
 	//if a RegionalMap gets negative coordinates, bad things happen to Perlin RNG
 	inline static int ORIGIN_OFFSET = 500;
 	inline static constexpr const char* K_HEIGHTMAP_FOLDER_NAME = "Local_Heights_";
