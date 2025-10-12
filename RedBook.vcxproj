@@ -167,14 +167,17 @@
     <ClInclude Include="Perlin.h" />
     <ClInclude Include="RedBook.h" />
     <ClInclude Include="RedBookGlobal.h" />
-    <ClInclude Include="RegionalDataLoc.h" />
+    <ClInclude Include="RegionalDataRasterManager.h" />
+    <ClInclude Include="RegionalDataRendering.h" />
     <ClInclude Include="RegionalMap.h" />
     <ClInclude Include="RenderUtils.h" />
     <ClInclude Include="SamplePoint.h" />
     <ClInclude Include="Switches.h" />
     <ClInclude Include="TerrainTemplate.h" />
     <ClInclude Include="TerrainType.h" />
+    <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="Timer.h" />
+    <ClInclude Include="UniqueRequestStack.h" />
     <ClInclude Include="VoronoiAlgorithms.h" />
     <ClInclude Include="VoronoiRendering.h" />
     <ClInclude Include="WaterDroplet.h" />
@@ -199,6 +202,7 @@
     <ClCompile Include="OutlineRendering.cpp" />
     <ClCompile Include="Perlin.cpp" />
     <ClCompile Include="RedBook.cpp" />
+    <ClCompile Include="RegionalDataRendering.cpp" />
     <ClCompile Include="RegionalMap.cpp" />
     <ClCompile Include="RenderUtils.cpp" />
     <ClCompile Include="SamplePoint.cpp" />

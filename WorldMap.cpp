@@ -12,10 +12,10 @@
 #include <gtc/matrix_transform.hpp>
 
 using namespace std;
-WorldMap::WorldMap(const char* name) : 
+WorldMap::WorldMap(const char* name, const std::array<int, REGIONAL_MAP_NUM_LODS>& cacheSizes) :
 	worldName(name), FileAvaiable(true), regions(nullptr),
 	x0(0), y0(0), w(1), h(1), dX(0), dY(0), texWidth(0), texHeight(0),
-	heightmaps(400, this)
+	heightmaps(cacheSizes, this, &myWorkerThread)
 {
 	tileSize = DEFAULT_TILE_SIZE;
 	InitNewWorld();
@@ -52,6 +52,7 @@ WorldMap::~WorldMap()
 	outlineRenderer.Cleanup();
 	meshPointRenderer.Cleanup();
 	voronoiRenderer.Cleanup();
+	regionalDataRenderer.Cleanup();
 }
 /*public String GetDirectory()
 {
@@ -692,12 +693,40 @@ WorldMap::RenderRegionalData(int width, int height, float regionDim)
 
 	glm::mat4 orthoProj = glm::ortho(left, right, bottom, top, nearZ, farZ);
 
+	if (!regionalDataRenderer.IsInitialized())
+		regionalDataRenderer.Init();
+
+	myWorkerThread.DiscardAllWaitingTasks();
+
+	vector<glm::vec2> sectionLocs;
+	vector<RegionalDataLoc> sections;
+	vector<RegionalDataCheck*> checks;
+	checks.push_back(&heightmaps);
+
 	ForEachOnSceenRegionalMap(
-		[this, regionDim, width, height](RegionalMap* region, float xLoc, float yLoc)
+		[this, orthoProj, regionDim, width, height, &sectionLocs, &sections, &checks](RegionalMap* region, float xLoc, float yLoc)
 		{
-			RegionalDataLoc loc(region->GetWorldX(), region->GetWorldY(), 0, 0, 1);
-			Heightmap hm = heightmaps.GetRaster(loc);
+			region->GatherRelevantDataIDs(regionDim, width, height, xLoc, yLoc, checks, sectionLocs, sections);
 		}, width, height);
+
+	for (int i = 0; i < sections.size(); i++)
+	{
+		Heightmap hm = heightmaps.GetRaster(sections[i]);
+		glm::vec2 renderLoc = sectionLocs[i];
+		float dim = regionDim / sections[i].GetNumSectionsPerSide();
+
+		glm::vec4 color = glm::vec4(1, 1, 1, 1);
+		if (sections[i].LOD == 2)
+			color = glm::vec4(1, 0, 0, 1);
+		else if (sections[i].LOD == 3)
+			color = glm::vec4(0, 1, 0, 1);
+		else if(sections[i].LOD == 4)
+			color = glm::vec4(0, 0, 1, 1);
+		else if (sections[i].LOD == 5)
+			color = glm::vec4(1, 1, 0, 1);
+		if (hm.OkayToUse())
+			regionalDataRenderer.Render(renderLoc, dim, dim, orthoProj, hm.GetRawData(), color);
+	}
 
 }
 
@@ -794,7 +823,7 @@ WorldMap::Render(int width, int height)
 	}
 	else if(Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::ELEVATION_CURR)
 	{
-		
+		RenderRegionalData(width, height, regionDim);
 	}
 	if (Switches::OUTLINE_MAPS)
 	{
@@ -804,7 +833,7 @@ WorldMap::Render(int width, int height)
 	{
 		RenderMeshPoints(width, height, regionDim);
 	}
-
+	//myWorkerThread.discardAllQueuedTasks();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);  // Return to default framebuffer
 
 	return renderTexture;  // Return the texture ID for use in rendering

@@ -5,6 +5,8 @@
 #include <glm.hpp>
 #include "WatermapValue.h"
 #include "LocalMap.h"
+#include <cmath>
+#include "RegionalDataRasterManager.h"
 
 class WorldMap;
 class SamplePoint;
@@ -52,6 +54,14 @@ public:
 	int GetWorldY() { return y + ORIGIN_OFFSET; }
 	void EnableRendering() { readyToRender = true; }
 
+	
+	void GatherRelevantDataIDs(
+		float regionDim,
+		int screenWidth, int screenHeight,
+		float myX, float myY,
+		std::vector<RegionalDataCheck*>& dataChecks,
+		std::vector<glm::vec2>& dataLocs,
+		std::vector<RegionalDataLoc>& dataIDs);
 	void GatherLocalMapOutlineLocations(
 		int tileD,
 		int screenWidth, int screenHeight,
@@ -102,7 +112,7 @@ public:
 
 	inline static constexpr int VORONOI_DIM = 192;
 	inline static constexpr double MIN_VORONOI_DIST = 1.41421356237 / VORONOI_DIM;
-	inline static constexpr int DIMENSION = 16;
+	inline static constexpr int DIMENSION = 1 << (REGIONAL_MAP_NUM_LODS - 1); //2^4 = 16
 	//if a RegionalMap gets negative coordinates, bad things happen to Perlin RNG
 	inline static int ORIGIN_OFFSET = 500;
 	inline static constexpr const char* K_HEIGHTMAP_FOLDER_NAME = "Local_Heights_";

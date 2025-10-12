@@ -6,6 +6,7 @@
 #include "OutlineRendering.h"
 #include "MeshPointRendering.h"
 #include "VoronoiRendering.h"
+#include "RegionalDataRendering.h"
 #include "Heightmap.h"
 
 
@@ -16,7 +17,7 @@ class WorldMap
 
 public:
 
-	WorldMap(const char* name);
+	WorldMap(const char* name, const std::array<int, REGIONAL_MAP_NUM_LODS>& cacheSizes);
 	~WorldMap();
 
 	void EnableAllRegionalRenderings();
@@ -86,6 +87,8 @@ public:
 	int tileSize;
 	HeightmapManager heightmaps;
 
+	RegionalDataRequestStack myWorkerThread = RegionalDataRequestStack(1);
+
 private:
 	int x0, y0; //which cell in regions counts as "0,0"? This may change as we expand!
 	int w, h; //how many cells do we have?
@@ -102,6 +105,7 @@ private:
 	OutlineRendering outlineRenderer;
 	MeshPointRendering meshPointRenderer;
 	VoronoiRendering voronoiRenderer;
+	RegionalDataRendering regionalDataRenderer;
 
 	bool textureInit = false;
 	int texWidth;

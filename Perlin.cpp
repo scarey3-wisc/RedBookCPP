@@ -386,8 +386,8 @@ const Perlin Perlin::sedimentStepMask(45.6, 0, 6, 1.8, 0.23, true);
 //some functions to push the terrain a bit more
 const Perlin Perlin::rockyJitters(125, 0, 4, 2, 0, false);
 
-const Perlin Perlin::mountainHeightDelta(172, 0, 6, 2.2, 0, false);
-const Perlin Perlin::plainsHeightDelta(88, 0, 6, 2, 0, false);
+const Perlin Perlin::mountainHeightDelta(172, 0, 6, 1.7, 0, false);
+const Perlin Perlin::plainsHeightDelta(88, 0, 6, 1.7, 0, false);
 const Perlin Perlin::elevDeltas[2] = { Perlin::plainsHeightDelta, Perlin::mountainHeightDelta };
 
 //------------------------------------------------------------------------------

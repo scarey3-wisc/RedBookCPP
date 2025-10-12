@@ -1917,6 +1917,87 @@ RegionalMap::GatherSamplePointCenters(float regionalDim,
 	}
 }
 
+void
+RegionalMap::GatherRelevantDataIDs(
+	float regionDim,
+	int screenWidth, int screenHeight,
+	float myX, float myY,
+	vector<RegionalDataCheck*>& dataChecks,
+	vector<glm::vec2>& dataLocs,
+	vector<RegionalDataLoc>& dataIDs
+)
+{
+	RegionalDataLoc top = RegionalDataLoc(GetWorldX(), GetWorldY(), 0, 0, 1);
+
+
+	bool topAvailable = true;
+	for (RegionalDataCheck* checker : dataChecks)
+		if (!checker->DataAvailable(top))
+			topAvailable = false;
+
+	if (!topAvailable)
+		return;
+
+	//the return here signals whether I'm providing data - either from myself or my children
+	auto inclusionDecision = [&dataLocs, &dataIDs, &dataChecks,
+	regionDim, screenWidth, screenHeight, myX, myY](auto self, RegionalDataLoc topic) -> void
+	{
+		//We're assuming that topic is onscreen and that it's data is available. We're deciding
+		//whether to use it or use its children instead.
+
+		float pixelSize = regionDim / topic.GetNumSectionsPerSide();
+		float mySectionX = myX + pixelSize * topic.x;
+		float mySectionY = myY + pixelSize * topic.y;
+		if (pixelSize <= REGIONAL_DATA_DIMENSION)
+		{
+			//we're high enough resolution; just return topic
+			dataLocs.push_back(glm::vec2(mySectionX, mySectionY));
+			dataIDs.push_back(topic);
+		}
+		else if (topic.LOD == REGIONAL_MAP_NUM_LODS)
+		{
+			//we're not supposed to go to a higher resolution, so return topic
+			dataLocs.push_back(glm::vec2(mySectionX, mySectionY));
+			dataIDs.push_back(topic);
+		}
+		else
+		{
+			std::vector<RegionalDataLoc> relevantChildren;
+			for (RegionalDataLoc child : topic.GetHigherLODs())
+			{
+				float childPixelSize = regionDim / child.GetNumSectionsPerSide();
+				float childX = myX + childPixelSize * child.x;
+				float childY = myY + childPixelSize * child.y;
+				if (childX > screenWidth)
+					continue;
+				if (childY > screenHeight)
+					continue;
+				if (childX + childPixelSize < 0)
+					continue;
+				if (childY + childPixelSize < 0)
+					continue;
+				relevantChildren.push_back(child);
+			}
+			bool allAvailable = true;
+			for (RegionalDataLoc child : relevantChildren)
+				for (RegionalDataCheck* checker : dataChecks)
+					if (!checker->DataAvailable(child))
+						allAvailable = false;
+			if (!allAvailable)
+			{
+				dataLocs.push_back(glm::vec2(mySectionX, mySectionY));
+				dataIDs.push_back(topic);
+			}
+			else
+			{
+				for (RegionalDataLoc child : relevantChildren)
+					self(self, child);
+			}
+		}
+	};
+	inclusionDecision(inclusionDecision, top);
+}
+
 void 
 RegionalMap::GatherLocalMapOutlineLocations(
 	int tileD,
@@ -1946,160 +2027,7 @@ RegionalMap::GatherLocalMapOutlineLocations(
 		myY -= DIMENSION * tileD;
 	}
 }
-/*public void Render(double d, Graphics2D g2)
-{
-	if (!readyToRender)
-	{
-		g2.setColor(new Color(50, 50, 50));
-		g2.fillRect(0, 0, (int)d, (int)d);
-		return;
-	}
-	AffineTransform saved = g2.getTransform();
-	double tileD = d / DIMENSION;
-	for (int i = 0; i < DIMENSION; i++)
-	{
-		for (int j = 0; j < DIMENSION; j++)
-		{
-			if (g2.hitClip(0, 0, (int)tileD, (int)tileD))
-			{
-				LocalMap lm = topography[i * DIMENSION + j];
-				lm.Render((int)tileD, g2);
-				if (Switches.OUTLINE_MAPS)
-				{
-					g2.setColor(Color.red);
-					g2.drawRect(0, 0, (int)tileD, (int)tileD);
-				}
-			}
-			g2.translate(0, tileD);
 
-		}
-		g2.translate(tileD, -1 * DIMENSION * tileD);
-	}
-	g2.setTransform(saved);
-	if (Switches.OUTLINE_MAPS)
-	{
-		g2.setColor(Color.green);
-		g2.drawRect(0, 0, (int)d, (int)d);
-	}
-
-
-	if (Switches.PAINT_VORONOI_CENTERS)
-	{
-		double mvd = MIN_VORONOI_DIST * d;
-		int dotMvd = 6;
-		if (mvd > 12)
-		{
-			for (int i = 0; i < voronoiList.size(); i++)
-			{
-				SamplePoint p = voronoiList.get(i);
-				double x = p.x - GetWorldX();
-				double y = p.y - GetWorldY();
-				x *= d;
-				y *= d;
-				int xL = (int)(x - mvd * 0.5);
-				int yL = (int)(y - mvd * 0.5);
-				if (!g2.hitClip(xL, yL, (int)mvd, (int)mvd))
-					continue;
-
-				if (mvd > 24)
-				{
-					g2.setColor(Color.orange);
-					g2.drawOval(xL, yL, (int)(mvd), (int)(mvd));
-				}
-
-				xL = (int)(x - dotMvd * 0.5);
-				yL = (int)(y - dotMvd * 0.5);
-				if (p.IsWaterPoint())
-				{
-					g2.setColor(Color.blue);
-					g2.fillOval(xL - 1, yL - 1, (int)(dotMvd)+2, (int)(dotMvd)+2);
-				}
-				g2.setColor(Color.black);
-				g2.fillOval(xL, yL, (int)(dotMvd), (int)(dotMvd));
-				if (mvd < 48)
-					continue;
-				for (SamplePoint s : p.GetAdjacentSamples())
-				{
-					MeshConnection con = p.GetConnection(s);
-					MeshPoint m = con.GetMid();
-					if (m == null)
-						continue;
-					x = m.x - GetWorldX();
-					y = m.y - GetWorldY();
-					x *= d;
-					y *= d;
-
-					xL = (int)(x - dotMvd * 0.5);
-					yL = (int)(y - dotMvd * 0.5);
-					if (!g2.hitClip(xL, yL, (int)(dotMvd), (int)(dotMvd)))
-						continue;
-
-					if (m.IsWaterPoint())
-					{
-						g2.setColor(Color.blue);
-						g2.fillOval(xL - 1, yL - 1, (int)(dotMvd)+2, (int)(dotMvd)+2);
-					}
-					g2.setColor(Color.green);
-					g2.fillOval(xL, yL, (int)(dotMvd), (int)(dotMvd));
-
-					if (mvd < 96)
-						continue;
-					for (MeshPoint mAdj : m.GetAdjacent())
-					{
-						MeshConnection mCon = m.GetConnection(mAdj);
-						if (mCon == null)
-							continue;
-						MeshPoint mm = mCon.GetMid();
-						if (mm == null)
-							continue;
-						x = mm.x - GetWorldX();
-						y = mm.y - GetWorldY();
-						x *= d;
-						y *= d;
-
-						xL = (int)(x - dotMvd * 0.5);
-						yL = (int)(y - dotMvd * 0.5);
-						if (!g2.hitClip(xL, yL, (int)(dotMvd), (int)(dotMvd)))
-							continue;
-
-						if (mm.IsWaterPoint())
-						{
-							g2.setColor(Color.blue);
-							g2.fillOval(xL - 1, yL - 1, (int)(dotMvd)+2, (int)(dotMvd)+2);
-						}
-						g2.setColor(Color.red);
-						g2.fillOval(xL, yL, (int)(dotMvd), (int)(dotMvd));
-
-						if (mvd < 128)
-							continue;
-						for (MeshPoint mmadj : mm.GetAdjacent())
-						{
-							MeshConnection mmCon = mm.GetConnection(mmadj);
-							if (mmCon == null)
-								continue;
-							MeshPoint mmm = mmCon.GetMid();
-							if (mmm == null)
-								continue;
-							x = mmm.x - GetWorldX();
-							y = mmm.y - GetWorldY();
-							x *= d;
-							y *= d;
-
-							xL = (int)(x - dotMvd * 0.5);
-							yL = (int)(y - dotMvd * 0.5);
-							if (!g2.hitClip(xL, yL, (int)(dotMvd), (int)(dotMvd)))
-								continue;
-							g2.setColor(Color.blue);
-							g2.fillOval(xL, yL, (int)(dotMvd), (int)(dotMvd));
-						}
-					}
-				}
-
-			}
-		}
-
-	}
-}*/
 LocalMap* 
 RegionalMap::GetLocalMapAt(int x, int y)
 {

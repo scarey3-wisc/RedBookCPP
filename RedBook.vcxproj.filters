@@ -82,6 +82,9 @@
     <ClCompile Include="Heightmap.cpp">
       <Filter>RegionalData\Source</Filter>
     </ClCompile>
+    <ClCompile Include="RegionalDataRendering.cpp">
+      <Filter>RenderMethods\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\imgui\imconfig.h">
@@ -195,8 +198,17 @@
     <ClInclude Include="Timer.h">
       <Filter>Utilities\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="RegionalDataLoc.h">
+    <ClInclude Include="RegionalDataRasterManager.h">
       <Filter>RegionalData\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="RegionalDataRendering.h">
+      <Filter>RenderMethods\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ThreadPool.h">
+      <Filter>Utilities\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="UniqueRequestStack.h">
+      <Filter>Utilities\Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

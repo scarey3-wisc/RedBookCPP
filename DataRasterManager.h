@@ -6,13 +6,13 @@
 #include <array>
 #include <stdexcept>
 #include <memory>
+#include "UniqueRequestStack.h"
 
 class WorldMap;
 
 struct DataRasterDefaultPolicy
 {
-	static bool ThreadOnAllocation() { return false; }
-	static bool ThreadOnDeallocation() { return false; }
+	static bool ThreadForAllocation() { return false; }
 
 	template <typename Handle>
 	static void OnAllocation(Handle handle, WorldMap* world) {}
@@ -61,12 +61,15 @@ private:
 	{
 		DataRasterSlot(ID assigned) : assignedID(assigned)
 		{
-			useID = 0;
 			dataReady = false;
 		}
 		~DataRasterSlot()
 		{
 
+		}
+		void Invalidate()
+		{
+			dataReady = false;
 		}
 		void MarkDataReady()
 		{
@@ -74,12 +77,10 @@ private:
 		}
 		void Reassign(ID newID)
 		{
-			useID++;
 			dataReady = false;
 			assignedID = newID;
 			data.Clear();
 		}
-		int useID;
 		ID assignedID;
 		bool dataReady;
 		Raster data;
@@ -97,9 +98,13 @@ public:
 	public:
 		LimitedDataRasterHandle(const LimitedDataRasterHandle& other) = default;
 		LimitedDataRasterHandle& operator=(const LimitedDataRasterHandle& other) = default;
+		bool OkayToUse() const
+		{
+			return Valid() && Ready();
+		}
 		bool Valid() const
 		{
-			return useID == data->useID;
+			return data != nullptr && myID == data->assignedID;
 		}
 		bool Ready() const
 		{
@@ -131,12 +136,17 @@ public:
 				throw std::runtime_error("Dereferencing an outdated Data Raster Handle");
 			data->data.Set(d, index);
 		}
+		inline DataType* GetRawData()
+		{
+			if (!Valid())
+				throw std::runtime_error("Dereferencing an outdated Data Raster Handle");
+			return data->data.data;
+		}
 
 	protected:
 		void UpdateSlot(SlotPtr newSlot)
 		{
 			data = newSlot;
-			useID = data->useID;
 		}
 	public:
 		ID myID;
@@ -144,9 +154,7 @@ public:
 		friend class DataRasterManager;
 		LimitedDataRasterHandle(SlotPtr slotToAccept, ID myID) : data(slotToAccept), myID(myID)
 		{
-			useID = data->useID;
 		}
-		int useID;
 		SlotPtr data;
 	};
 	
@@ -156,12 +164,15 @@ public:
 
 private:
 	int fullCapacity;
-	int currentCacheCapacity;
 
 	std::unordered_map<SlotPtr, typename std::list<SlotPtr>::iterator> locLookup;
 	std::list<SlotPtr> cache;
 	std::unordered_map<ID, SlotPtr, IDHash> idLookup;
 	std::unordered_set<SlotPtr> pinned;
+
+	RequestStack<ID, IDHash>* threads;
+
+	std::mutex manager_mutex;
 
 	WorldMap* myWorld;
 
@@ -171,156 +182,89 @@ private:
 // 	   METHODS NEEDED FOR PUBLIC HANDLE CLASS
 //------------------------------------------------------------------------------
 
-	SlotPtr UnpinSlotForID(const ID& id)
+	SlotPtr GetSlotForID(const ID& id)
 	{
+		std::unique_lock<std::mutex> lock(manager_mutex);
 		auto it = idLookup.find(id);
 		if (it != idLookup.end())
 		{
-			// We do have this raster in cache
+			// We already have this raster in cache
 			SlotPtr slot = it->second;
-			auto pinIt = pinned.find(slot);
-			if (pinIt != pinned.end())
+			if (pinned.find(slot) != pinned.end())
 			{
-				pinned.erase(pinIt);
-				// Move to front of cache
-				cache.push_front(slot);
-				locLookup[slot] = cache.begin();
-				currentCacheCapacity++;
+				//we have it, it's pinned, we're fine
 				return slot;
+			}
+
+			auto locIt = locLookup.find(slot);
+			if (locIt != locLookup.end())
+			{
+				// Move to front of cache
+				cache.splice(cache.begin(), cache, locIt->second);
 			}
 			else
 			{
-				// It wasn't pinned
-				return nullptr;
+				throw new std::runtime_error("DataRasterManager internal error: we claim to be managing a slot but have no record of its location");
 			}
+			return slot;
 		}
-		else
+		auto allocationDecision = [this, id]()
 		{
-			// We don't have this raster at all
+			std::unique_lock<std::mutex> innerLock(manager_mutex);
+			SlotPtr slotToUse = nullptr;
+			if (cache.size() + pinned.size() < fullCapacity)
+			{
+				SlotPtr newSlot = SlotPtr(new DataRasterSlot(id));
+				pinned.insert(newSlot);
+				idLookup[id] = newSlot;
+				slotToUse = newSlot;
+				innerLock.unlock();
+			}
+			else
+			{
+				if (cache.empty())
+					return slotToUse; //returns nullptr
+
+				DataRasterSlot* last = cache.back();
+				ID prevID = last->assignedID;
+				cache.pop_back();
+				locLookup.erase(last);
+				pinned.insert(last);
+
+				innerLock.unlock();
+				Policy::OnDeallocation(LimitedDataRasterHandle(last, prevID), myWorld);
+				innerLock.lock();
+
+				last->Invalidate();
+				idLookup.erase(prevID);
+				last->Reassign(id);
+				idLookup[id] = last;
+				slotToUse = last;
+				innerLock.unlock();
+			}
+
+			Policy::OnAllocation(LimitedDataRasterHandle(slotToUse, id), myWorld);
+
+			innerLock.lock();
+			pinned.erase(slotToUse);
+			cache.push_front(slotToUse);
+			locLookup[slotToUse] = cache.begin();
+			slotToUse->MarkDataReady();
+
+			return slotToUse;
+		};
+
+		if (threads != nullptr && Policy::ThreadForAllocation())
+		{
+			threads->RequestTask(id, allocationDecision);
 			return nullptr;
 		}
-	}
-
-	SlotPtr GetPinnedSlotForID(const ID& id)
-	{
-		auto it = idLookup.find(id);
-		if (it != idLookup.end())
-		{
-			// We already have this raster in cache
-			SlotPtr slot = it->second;
-			if (pinned.find(slot) == pinned.end())
-			{
-				auto locIt = locLookup.find(slot);
-				if (locIt != locLookup.end())
-				{
-					// Remove from cache, add to pinned list
-					currentCacheCapacity--;
-					cache.erase(locIt->second);
-					locLookup.erase(locIt->first);
-					pinned.insert(slot);
-				}
-				else
-				{
-					throw new std::runtime_error("DataRasterManager internal error: we claim to be managing a slot but have no record of its location");
-				}
-			}
-			return slot;
-		}
-
-		if (cache.size() >= currentCacheCapacity)
-		{
-			// We need to kick something out of the cache
-			auto last = cache.back();
-			//TODO: we need to give last an opportunity to save itself if it's dirty
-			Policy::OnDeallocation(LimitedDataRasterHandle(last, last->assignedID), myWorld);
-
-			//Now we can remove last from the cache.
-			currentCacheCapacity--;
-			cache.pop_back();
-			idLookup.erase(last->assignedID);
-			locLookup.erase(last);
-
-			//TODO: we need to populate last with the new data for ID here
-			last->Reassign(id);
-			Policy::OnAllocation(LimitedDataRasterHandle(last, id), myWorld);
-			last->MarkDataReady();
-			//And now we reassign it to the new ID and add it to the pinned area
-			idLookup[id] = last;
-			pinned.insert(last);
-			return last;
-		}
-
 		else
-		{
-			// We have space to make a new slot
-			SlotPtr newSlot = SlotPtr(new DataRasterSlot(id));
-			Policy::OnAllocation(LimitedDataRasterHandle(newSlot, id), myWorld);
-			newSlot->MarkDataReady();
-			currentCacheCapacity--;
-			idLookup[id] = newSlot;
-			pinned.insert(newSlot);
-			return newSlot;
-		}
+			return allocationDecision();
 	}
 
-	SlotPtr GetSlotForID(const ID& id)
-	{
-		auto it = idLookup.find(id);
-		if (it != idLookup.end())
-		{
-			// We already have this raster in cache
-			SlotPtr slot = it->second;
-			if (pinned.find(slot) == pinned.end())
-			{
-				auto locIt = locLookup.find(slot);
-				if (locIt != locLookup.end())
-				{
-					// Move to front of cache
-					cache.splice(cache.begin(), cache, locIt->second);
-				}
-				else
-				{
-					throw new std::runtime_error("DataRasterManager internal error: we claim to be managing a slot but have no record of its location");
-				}
-			}
-			return slot;
-		}
+	//------------------------------------------------------------------------------
 
-		if (cache.size() >= currentCacheCapacity)
-		{
-			// We need to kick something out of the cache
-			auto last = cache.back();
-			//TODO: we need to give last an opportunity to save itself if it's dirty
-			Policy::OnDeallocation(LimitedDataRasterHandle(last, last->assignedID), myWorld);
-
-			//Now we can remove last from the cache.
-			cache.pop_back();
-			idLookup.erase(last->assignedID);
-			locLookup.erase(last);
-
-			//TODO: we need to populate last with the new data for ID here
-			last->Reassign(id);
-			Policy::OnAllocation(LimitedDataRasterHandle(last, id), myWorld);
-			last->MarkDataReady();
-			//And now we reassign it to the new ID and add it to the front of the cache
-			idLookup[id] = last;
-			cache.push_front(last);
-			locLookup[last] = cache.begin();
-			return last;
-		}
-
-		else
-		{
-			// We have space to make a new slot
-			SlotPtr newSlot = SlotPtr(new DataRasterSlot(id));
-			Policy::OnAllocation(LimitedDataRasterHandle(newSlot, id), myWorld);
-			newSlot->MarkDataReady();
-			idLookup[id] = newSlot;
-			cache.push_front(newSlot);
-			locLookup[newSlot] = cache.begin();
-			return newSlot;
-		}
-	}
 
 public:
 
@@ -336,17 +280,6 @@ public:
 		void Refresh()
 		{
 			LimitedDataRasterHandle::UpdateSlot(source->GetSlotForID(LimitedDataRasterHandle::myID));
-		}
-		void Pin()
-		{
-			LimitedDataRasterHandle::UpdateSlot(source->GetPinnedSlotForID(LimitedDataRasterHandle::myID));
-		}
-		void Unpin()
-		{
-			SlotPtr newData = source->UnpinSlotForID(LimitedDataRasterHandle::myID);
-			if (newData == nullptr)
-				throw std::runtime_error("Attempt to unpin a Data Raster Handle that wasn't pinned");
-			LimitedDataRasterHandle::UpdateSlot(newData);
 		}
 
 	private:
@@ -364,16 +297,23 @@ public:
 //------------------------------------------------------------------------------
 
 public:
-	DataRasterManager(int capacity, WorldMap* myWorld) : myWorld(myWorld)
+	DataRasterManager(int capacity, WorldMap* myWorld, RequestStack<ID, IDHash>* pool = nullptr) : myWorld(myWorld), threads(pool)
 	{
 		if (capacity <= 0)
 			throw std::runtime_error("DataRasterManager must have a positive capacity");
 		fullCapacity = capacity;
-		currentCacheCapacity = capacity;
+	}
+
+	void RefreshRaster(const ID& id)
+	{
+		GetSlotForID(id);
 	}
 
 	DataRasterHandle GetRaster(const ID& id)
 	{
 		return DataRasterHandle(GetSlotForID(id), id, this);
 	}
+
+	int GetMaxCapacity() const { return fullCapacity; }
+	int GetNumUsed() const { return (int)(cache.size() + pinned.size()); }
 };

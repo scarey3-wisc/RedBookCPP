@@ -15,6 +15,7 @@
 #include <algorithm>
 #include "VoronoiAlgorithms.h"
 #include <chrono>
+#include <omp.h>
 
 using namespace std;
 using namespace RedBook;
@@ -86,8 +87,7 @@ WorldMap* myWorldMap = nullptr;
 
 void StartupTests()
 {
-    HeightmapManager manager(2, myWorldMap);
-    Heightmap h = manager.GetRaster(RegionalDataLoc(RegionalMap::ORIGIN_OFFSET, RegionalMap::ORIGIN_OFFSET, 0, 0, 1));
+
 }
 
 void RedBookInfoPanel(float panelWidth)
@@ -95,19 +95,16 @@ void RedBookInfoPanel(float panelWidth)
     ImGui::Text("Render Info");
     ImGui::Separator();
     ImGui::Spacing();
-    for (int i = 0; i < TILE_RENDERING_CACHES; i++)
+    for (int i = 0; i < REGIONAL_MAP_NUM_LODS; i++)
     {
-		ImGui::Text("%s: %ld", TILE_RENDERING_NAMES[i], 50); // Placeholder for actual cache size
+        int LOD = i + 1;
+        int max = myWorldMap->heightmaps.GetMaxCapacity(LOD);
+        int stored = myWorldMap->heightmaps.GetNumUsed(LOD);
+        int pinned = 0;
+		ImGui::Text("LOD #%d: %d / %d (%d)", LOD, stored, max, pinned); // Placeholder for actual cache size
     }
-	ImGui::Text("%d queued (placeholder)", 10); // Placeholder for render queue size
-    ImGui::NewLine();
-
-	int dimRange[] = { 0, 1, 2, 3, 4, 5 }; // Placeholder for actual dimension range
-    for (int i = 0; i < sizeof(dimRange) / sizeof(dimRange[0]); i++)
-    {
-        ImGui::Text("Dimension %d: %d", i, dimRange[i]); // Placeholder for actual dimension data
-	}
-	ImGui::Text("Smart Image Count: %d", 100); // Placeholder for smart image count
+	size_t numQueued = myWorldMap->myWorkerThread.NumActiveRequests();
+	ImGui::Text("%d queued", numQueued); // Placeholder for render queue size
     ImGui::NewLine();
     ImGui::NewLine();
 
@@ -229,7 +226,7 @@ void RedBookDisplayPanel()
     ImGui::Image((void*)(intptr_t)textureColorbuffer, ImVec2(totalWidth, totalHeight),
         ImVec2(0, 1), ImVec2(1, 0));
 
-    double milis = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+    double milis = (double) std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 
     double deltaAverageSmoothness = 0.02;
     renderTimeMovingAverage = (1.0 * (1.0 - deltaAverageSmoothness) * renderTimeMovingAverage + 
@@ -364,7 +361,8 @@ void RedBookDisplay(int screenWidth, int screenHeight)
 void 
 RedBookInitWorld()
 {
-    myWorldMap = new WorldMap("Nerean Sea");
+    std::array<int, REGIONAL_MAP_NUM_LODS> capacities = std::to_array(REGIONAL_RASTER_CAPCITIES);
+    myWorldMap = new WorldMap("Nerean Sea", capacities);
     vector<SamplePoint*> vp;
     myWorldMap->FillAllContinents(0, 0, vp);
     StartupTests();
@@ -387,10 +385,15 @@ int WINAPI WinMain(
     LPSTR lpCmdLine, 
     int nCmdShow)
 {
+
+	omp_set_num_threads(omp_get_max_threads() * 2 / 3);
     AllocConsole();
     FILE* fp;
     freopen_s(&fp, "CONOUT$", "w", stdout);
     freopen_s(&fp, "CONOUT$", "w", stderr);
+
+    std::cout << "Using " << omp_get_max_threads() << " threads for parallel processing." << std::endl;
+
 
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
