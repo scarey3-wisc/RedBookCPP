@@ -14,6 +14,7 @@
 #include "SamplePoint.h"
 #include <algorithm>
 #include "VoronoiAlgorithms.h"
+#include "ContinentGenAlgorithms.h"
 #include <chrono>
 #include <omp.h>
 
@@ -370,6 +371,25 @@ RedBookInitWorld()
     vector<SamplePoint*> coastal = VoronoiAlgorithms::FindBoundaryPoints(vp, TerrainTemplate::OCEAN);
     VoronoiAlgorithms::ConvertSeasToLakes(coastal, Switches::MAX_SAMPLE_POINTS_IN_LAKE);
     VoronoiAlgorithms::ConvertCoastalLakeToOcean(vp);
+
+    vector<SamplePoint*> continent = VoronoiAlgorithms::FindAllWithinBoundary(vp, TerrainTemplate::OCEAN);
+    ContinentGenAlgorithms::BlurUpliftForTectonicAlgorithm(continent, 50, 2);
+
+    for (SamplePoint* sp : continent)
+        sp->SetElevation(1);
+
+    //paper recommends 2.5 * 10^5 and 5.611 * 10^-7 for erosion
+    cout << "Tectonic Uplift Algo: Detail-0" << endl;
+    ContinentGenAlgorithms::RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
+    cout << endl;
+   // VoronoiAlgorithms::IncreaseFractureLevel(continent);
+    cout << "Tectonic Uplift Algo: Detail-1" << endl;
+    ContinentGenAlgorithms::RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
+	cout << endl;
+
+    myWorldMap->EnableAllRegionalRenderings();
+    //myMap.SaveSampleFiles(continent, true, false, true, true);
+    cout << "Continent Generation Complete!" << endl;
 }
 
 

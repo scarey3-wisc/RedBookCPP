@@ -49,6 +49,11 @@ public:
 		for (auto p : adjacent)
 			f(p.first);
 	}
+
+	size_t GetNumAdjacent()
+	{
+		return adjacent.size();
+	}
 	bool AdjacentContains(MeshPoint* p);
 	//const std::unordered_map<MeshPoint*, MeshConnection*>& GetAdjacent() { return adjacent; }
 

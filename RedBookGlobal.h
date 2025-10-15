@@ -2,5 +2,5 @@
 #include <limits>  
 namespace RedBook  
 {  
-	inline static constexpr int REGIONAL_RASTER_CAPCITIES[] = {40, 60, 80, 100, 120};
+	inline static constexpr int REGIONAL_RASTER_CAPCITIES[] = {100, 300, 500, 700, 900};
 }

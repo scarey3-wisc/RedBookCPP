@@ -1,6 +1,7 @@
 #include "RegionalDataRendering.h"
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
+#include <string>
 #include "RenderUtils.h"
 
 static float rectVertices[] = {
@@ -10,7 +11,7 @@ static float rectVertices[] = {
     0.0f, 1.0f
 };
 
-static const char* vertexSource = R"(
+static const std::string vertexSource = R"(
 #version 330 core
 
 layout (location = 0) in vec2 aPos;      // Rectangle vertex
@@ -29,7 +30,7 @@ void main()
 }
 )";
 
-static const char* fragmentSource = R"(
+static const std::string heightmapFragSource = R"(
 #version 330 core
 
 in vec2 fragLocalPos; // Rectangle vertex from vertex shader
@@ -38,13 +39,33 @@ out vec4 FragColor;
 uniform isampler2D uHeightmap;
 uniform vec4 uColor;
 
+vec3 hsb2rgb(in vec3 c) {
+    vec3 rgb = clamp(
+        abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0,
+        0.0,
+        1.0
+    );
+    rgb = rgb * rgb * (3.0 - 2.0 * rgb); // smooth interpolation
+    return c.z * mix(vec3(1.0), rgb, c.y);
+}
+
 void main() 
 {
     int h = texture(uHeightmap, fragLocalPos).r; // sample red channel
     if(h < 0) h = 0; // clamp negative heights to zero
     if(h == 0)
         discard;
-    FragColor = uColor;
+    
+    float height = float(h) / 65535.0;
+    if(height < 0)
+        discard;
+    
+    float bandElev = mod(500 * pow(height, 1.0 / 3.0), 1000);
+	float hue = bandElev / 1000;
+	float brt = 0.2 + height / 10000;
+		
+	FragColor = vec4(hsb2rgb(vec3(hue, 0.8, brt)), 1.0);
+    
 }
 )";
 
@@ -72,7 +93,7 @@ RegionalDataRendering::Init() {
 
     // Compile shaders (vertex & fragment)
     // You'll need to write helper functions to compile/link shaders
-    shaderProgram = CompileAndLinkShader(vertexSource, fragmentSource);
+    shaderProgram = CompileAndLinkShader(vertexSource.c_str(), heightmapFragSource.c_str());
 }
 
 void

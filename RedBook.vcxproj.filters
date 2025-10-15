@@ -85,6 +85,9 @@
     <ClCompile Include="RegionalDataRendering.cpp">
       <Filter>RenderMethods\Source</Filter>
     </ClCompile>
+    <ClCompile Include="ContinentGenAlgorithms.cpp">
+      <Filter>Algorithms\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\imgui\imconfig.h">
@@ -209,6 +212,9 @@
     </ClInclude>
     <ClInclude Include="UniqueRequestStack.h">
       <Filter>Utilities\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ContinentGenAlgorithms.h">
+      <Filter>Algorithms\Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

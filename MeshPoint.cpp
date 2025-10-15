@@ -164,11 +164,7 @@ MeshPoint::CalculatePersonalDrainageArea()
 		[this](MeshPoint* o1, MeshPoint* o2) {
 			double theta1 = atan2(o1->x - x, o1->y - y);
 			double theta2 = atan2(o2->x - x, o2->y - y);
-			if (theta1 < theta2)
-				return -1;
-			if (theta1 > theta2)
-				return 1;
-			return 0;
+			return theta1 < theta2;
 		});
 	for (int i = 0; i < directlyAdjacent.size(); i++)
 	{

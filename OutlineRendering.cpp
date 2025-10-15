@@ -36,6 +36,8 @@ void main() {
 }
 )";
 
+//------------------------------------------------------------------------------
+
 void 
 OutlineRendering::Init() {
     if (initialzed) {
@@ -73,6 +75,8 @@ OutlineRendering::Init() {
     shaderProgram = CompileAndLinkShader(vertexSource, fragmentSource);
 }
 
+//------------------------------------------------------------------------------
+
 void 
 OutlineRendering::Render(std::vector<glm::vec2>& locs, float width, float height, const glm::mat4& viewProj, const glm::vec4& color)
 {
@@ -104,6 +108,8 @@ OutlineRendering::Render(std::vector<glm::vec2>& locs, float width, float height
     
    
 }
+
+//------------------------------------------------------------------------------
 
 void 
 OutlineRendering::Cleanup() {

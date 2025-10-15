@@ -67,11 +67,6 @@ public:
 							return;
 						}
 
-						std::cout << "Request State: ";
-						for(auto& stack : taskStack)
-							std::cout << stack.first << ":" << stack.second.size() << " ";
-						std::cout << std::endl;
-
 						// Get the next task from the queue
 
 						std::pair< ID, std::function<void()>> request = std::move(taskStack.begin()->second.front());
@@ -115,7 +110,6 @@ public:
 	// Enqueue task for execution by the thread pool
 	void RequestTask(ID id, std::function<void()> task)
 	{
-		std::cout << "We have a request to render from " << id.ToString() << std::endl;
 		int prio = CheckPriority(id);
 		{
 			std::unique_lock<std::mutex> lock(queue_mutex);

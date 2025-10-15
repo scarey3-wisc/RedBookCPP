@@ -1988,9 +1988,13 @@ RegionalMap::GatherRelevantDataIDs(
 				dataLocs.push_back(glm::vec2(mySectionX, mySectionY));
 				dataIDs.push_back(topic);
 			}
-			else
+			for (RegionalDataLoc child : relevantChildren)
 			{
-				for (RegionalDataLoc child : relevantChildren)
+				bool available = true;
+				for (RegionalDataCheck* checker : dataChecks)
+					if (!checker->DataAvailable(child))
+						available = false;
+				if(available)
 					self(self, child);
 			}
 		}

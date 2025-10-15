@@ -142,6 +142,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ContinentGenAlgorithms.h" />
     <ClInclude Include="DataImage.h" />
     <ClInclude Include="DataImageSize.h" />
     <ClInclude Include="DataRasterManager.h" />
@@ -185,6 +186,7 @@
     <ClInclude Include="WorldMap.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ContinentGenAlgorithms.cpp" />
     <ClCompile Include="external\glad\src\glad.c" />
     <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="external\imgui\backends\imgui_impl_opengl3.cpp" />

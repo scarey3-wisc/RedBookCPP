@@ -10,6 +10,8 @@
 
 using namespace std;
 
+//------------------------------------------------------------------------------
+
 void 
 VoronoiAlgorithms::EnsureRiversFlowDownhill(vector<SamplePoint*>& continent)
 {
@@ -55,6 +57,9 @@ VoronoiAlgorithms::EnsureRiversFlowDownhill(vector<SamplePoint*>& continent)
 		}
 	}
 }
+
+//------------------------------------------------------------------------------
+
 void 
 VoronoiAlgorithms::IncreaseFractureLevel(vector<SamplePoint*>& area)
 {
@@ -133,6 +138,9 @@ VoronoiAlgorithms::IncreaseFractureLevel(vector<SamplePoint*>& area)
 		}
 	}
 }
+
+//------------------------------------------------------------------------------
+
 void 
 VoronoiAlgorithms::SetRiverFlow(vector<SamplePoint*>& continent)
 {
@@ -197,6 +205,9 @@ VoronoiAlgorithms::SetRiverFlow(vector<SamplePoint*>& continent)
 		}
 	}
 }
+
+//------------------------------------------------------------------------------
+
 void 
 VoronoiAlgorithms::ConvertCoastalLakeToOcean(vector<SamplePoint*>& continentArea)
 {
@@ -219,6 +230,9 @@ VoronoiAlgorithms::ConvertCoastalLakeToOcean(vector<SamplePoint*>& continentArea
 				l->MakeOcean();
 	}
 }
+
+//------------------------------------------------------------------------------
+
 void 
 VoronoiAlgorithms::ConvertSeasToLakes(vector<SamplePoint*>& continentCoast, int maxLakeSize)
 {
@@ -233,6 +247,8 @@ VoronoiAlgorithms::ConvertSeasToLakes(vector<SamplePoint*>& continentCoast, int 
 	}
 }
 
+//------------------------------------------------------------------------------
+
 glm::dvec3 
 VoronoiAlgorithms::BarycentricCoordinatesDY(double x, double y, array<MeshPoint*, 3> vertices)
 {
@@ -245,6 +261,9 @@ VoronoiAlgorithms::BarycentricCoordinatesDY(double x, double y, array<MeshPoint*
 	double abp = SignedTriangleAreaDY(a->x, a->y, b->x, b->y, x, y, 3);
 	return glm::dvec3(pbc / abc, apc / abc, abp / abc);
 }
+
+//------------------------------------------------------------------------------
+
 double 
 VoronoiAlgorithms::SignedTriangleAreaDY(double x1, double y1, double x2, double y2, double x3, double y3, int whichCoord)
 {
@@ -262,6 +281,9 @@ VoronoiAlgorithms::SignedTriangleAreaDY(double x1, double y1, double x2, double 
 	}
 	return 0;
 }
+
+//------------------------------------------------------------------------------
+
 glm::dvec3
 VoronoiAlgorithms::BarycentricCoordinatesDX(double x, double y, array<MeshPoint*, 3> vertices)
 {
@@ -274,6 +296,9 @@ VoronoiAlgorithms::BarycentricCoordinatesDX(double x, double y, array<MeshPoint*
 	double abp = SignedTriangleAreaDX(a->x, a->y, b->x, b->y, x, y, 3);
 	return glm::dvec3(pbc / abc, apc / abc, abp / abc);
 }
+
+//------------------------------------------------------------------------------
+
 double 
 VoronoiAlgorithms::SignedTriangleAreaDX(double x1, double y1, double x2, double y2, double x3, double y3, int whichCoord)
 {
@@ -292,11 +317,15 @@ VoronoiAlgorithms::SignedTriangleAreaDX(double x1, double y1, double x2, double 
 	return 0;
 }
 
+//------------------------------------------------------------------------------
+
 glm::dvec3
 VoronoiAlgorithms::BarycentricCoordinates(double x, double y, array<SamplePoint*, 3> vertices)
 {
 	return BarycentricCoordinates(x, y, array<MeshPoint*, 3>{vertices[0], vertices[1], vertices[2]});
 }
+
+//------------------------------------------------------------------------------
 
 glm::dvec3 
 VoronoiAlgorithms::BarycentricCoordinates(double x, double y, array<MeshPoint*, 3> vertices)
@@ -310,6 +339,9 @@ VoronoiAlgorithms::BarycentricCoordinates(double x, double y, array<MeshPoint*, 
 	double abp = MathToolkit::SignedTriangleArea(a->x, a->y, b->x, b->y, x, y);
 	return glm::dvec3(pbc / abc, apc / abc, abp / abc);
 }
+
+//------------------------------------------------------------------------------
+
 double 
 VoronoiAlgorithms::TriangleArea(MeshPoint* a, MeshPoint* b, MeshPoint* c)
 {
@@ -320,6 +352,8 @@ VoronoiAlgorithms::TriangleArea(MeshPoint* a, MeshPoint* b, MeshPoint* c)
 	return abs(signedArea);
 }
 
+//------------------------------------------------------------------------------
+
 double 
 VoronoiAlgorithms::TriangleArea(array<MeshPoint*, 3> vertices)
 {
@@ -329,6 +363,8 @@ VoronoiAlgorithms::TriangleArea(array<MeshPoint*, 3> vertices)
 		vertices[2]->x, vertices[2]->y);
 	return abs(signedArea);
 }
+
+//------------------------------------------------------------------------------
 
 array<MeshPoint*, 3>
 VoronoiAlgorithms::FindContainingTriangle(double x, double y, SamplePoint* seed)
@@ -406,6 +442,9 @@ VoronoiAlgorithms::FindContainingTriangle(double x, double y, SamplePoint* seed)
 	return curr;
 
 }
+
+//------------------------------------------------------------------------------
+
 array<SamplePoint*, 3>
 VoronoiAlgorithms::FindContainingSampleTriangle(double x, double y, SamplePoint* seed)
 {
@@ -505,6 +544,9 @@ VoronoiAlgorithms::FindContainingSampleTriangle(double x, double y, SamplePoint*
 	results[2] = nullptr;
 	return results;
 }
+
+//------------------------------------------------------------------------------
+
 void 
 VoronoiAlgorithms::ClearHeights(vector<SamplePoint*>& coastalPoints)
 {
@@ -531,6 +573,8 @@ VoronoiAlgorithms::ClearHeights(vector<SamplePoint*>& coastalPoints)
 		}
 	}
 }
+
+//------------------------------------------------------------------------------
 
 void 
 VoronoiAlgorithms::AssignHeights(std::vector<SamplePoint*>& coastalPoints)
@@ -594,6 +638,8 @@ VoronoiAlgorithms::AssignHeights(std::vector<SamplePoint*>& coastalPoints)
 	}
 }
 
+//------------------------------------------------------------------------------
+
 void
 VoronoiAlgorithms::SortByElevation(vector<SamplePoint*>& continent)
 {
@@ -602,6 +648,8 @@ VoronoiAlgorithms::SortByElevation(vector<SamplePoint*>& continent)
 			return a->GetElevation() < b->GetElevation();
 		});
 }
+
+//------------------------------------------------------------------------------
 
 void 
 VoronoiAlgorithms::SortByElevation(vector<MeshPoint*>& continent)
@@ -612,6 +660,8 @@ VoronoiAlgorithms::SortByElevation(vector<MeshPoint*>& continent)
 		});
 }
 
+//------------------------------------------------------------------------------
+
 vector<SamplePoint*> 
 VoronoiAlgorithms::FindAllOfType(vector<SamplePoint*>& area, TerrainTemplate target)
 {
@@ -621,6 +671,9 @@ VoronoiAlgorithms::FindAllOfType(vector<SamplePoint*>& area, TerrainTemplate tar
 			found.push_back(sp);
 	return found;
 }
+
+//------------------------------------------------------------------------------
+
 //NOTE: the seeds are assumed to be *adjacent* to Terrain of the target type.
 //The classic use case here is having coastal 
 vector<vector<SamplePoint*>> 
@@ -661,6 +714,9 @@ VoronoiAlgorithms::FindTypeClumps(vector<SamplePoint*>& seeds, TerrainTemplate t
 	}
 	return found;
 }
+
+//------------------------------------------------------------------------------
+
 vector<SamplePoint*> 
 VoronoiAlgorithms::FindAllWithinBoundary(SamplePoint* seed, TerrainTemplate boundaryType)
 {
@@ -668,6 +724,8 @@ VoronoiAlgorithms::FindAllWithinBoundary(SamplePoint* seed, TerrainTemplate boun
 	listedSeeds.push_back(seed);
 	return FindAllWithinBoundary(listedSeeds, boundaryType);
 }
+
+//------------------------------------------------------------------------------
 
 vector<SamplePoint*> 
 VoronoiAlgorithms::FindAllWithinBoundary(std::vector<SamplePoint*>& seeds, TerrainTemplate boundaryType)
@@ -703,6 +761,9 @@ VoronoiAlgorithms::FindAllWithinBoundary(std::vector<SamplePoint*>& seeds, Terra
 	}
 	return found;
 }
+
+
+//------------------------------------------------------------------------------
 vector<SamplePoint*> 
 VoronoiAlgorithms::FindBoundaryPoints(SamplePoint* seed, TerrainTemplate boundaryTo)
 {
@@ -710,6 +771,9 @@ VoronoiAlgorithms::FindBoundaryPoints(SamplePoint* seed, TerrainTemplate boundar
 	listedSeeds.push_back(seed);
 	return FindBoundaryPoints(listedSeeds, boundaryTo);
 }
+
+//------------------------------------------------------------------------------
+
 vector<SamplePoint*> 
 VoronoiAlgorithms::FindBoundaryPoints(vector<SamplePoint*>& seeds, TerrainTemplate boundaryTo)
 {
@@ -760,6 +824,9 @@ VoronoiAlgorithms::FindBoundaryPoints(vector<SamplePoint*>& seeds, TerrainTempla
 	}
 	return found;
 }
+
+//------------------------------------------------------------------------------
+
 double 
 VoronoiAlgorithms::QueryGrade(TerrainTemplate from, SamplePoint* to)
 {
@@ -776,6 +843,8 @@ VoronoiAlgorithms::QueryGrade(TerrainTemplate from, SamplePoint* to)
 	return grade;
 }
 
+//------------------------------------------------------------------------------
+
 double 
 VoronoiAlgorithms::QueryGrade(TerrainTemplate from, TerrainTemplate to, bool min)
 {
@@ -786,6 +855,9 @@ VoronoiAlgorithms::QueryGrade(TerrainTemplate from, TerrainTemplate to, bool min
 	else
 		return GRADE_MAX_MATRIX[fromIndex][toIndex];
 }
+
+//------------------------------------------------------------------------------
+
 int 
 VoronoiAlgorithms::GradeQueryIndex(TerrainTemplate type)
 {
