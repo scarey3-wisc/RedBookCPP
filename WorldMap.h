@@ -71,7 +71,13 @@ private:
 		}
 	}
 
-	void RenderRegionalData(int width, int height, float regionDim);
+	enum RegionalDataRenderMode
+	{
+		BANDED_HEIGHTS,
+		CONTOUR,
+		HILLSHADE
+	};
+	void RenderRegionalData(int width, int height, float regionDim, RegionalDataRenderMode mode);
 	void RenderVoronoiTiles(int width, int height, float regionDim, bool terrainBased);
 	void RenderOutlines(int width, int height, float regionDim);
 	void RenderMeshPoints(int width, int height, float regionDim);

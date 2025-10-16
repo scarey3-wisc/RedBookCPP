@@ -45,7 +45,7 @@ Heightmap::OnAllocation(HeightmapBase handle, WorldMap* world)
 		return;
 	}
 	//width in world coordinates - probably between 1 and RegionalMap::DIMENSION, in powers of 2
-	double wcWidth = RegionalMap::DIMENSION / handle.myID.GetNumSectionsPerSide();
+	double wcWidth = 1.0 * RegionalMap::DIMENSION / handle.myID.GetNumSectionsPerSide();
 	double baseWorldX = handle.myID.regionX * RegionalMap::DIMENSION + wcWidth * handle.myID.x;
 	double baseWorldY = handle.myID.regionY * RegionalMap::DIMENSION + wcWidth * handle.myID.y;
 	double pixelWidth = wcWidth / DIM;

@@ -104,23 +104,35 @@ TectonicUpliftAlgorithm::UpdateSinkIndicies()
 	int count = 0;
 	for (int i = 0; i < boundary.size() + interior.size(); i++)
 	{
-		vector<MeshPoint*> chosen = boundary;
-		size_t chosenIndex = i;
 		if (i >= boundary.size())
 		{
-			chosenIndex -= boundary.size();
-			chosen = interior;
+			size_t chosenIndex = i - boundary.size();
+			MeshPoint* mp = interior[chosenIndex];
+			int previousSinkIndex = sinkIndices[i];
+			int nextSinkIndex = -1;
+			if (mp->GetDrainageSink() != nullptr)
+				nextSinkIndex = mp->GetDrainageSink()->GetContainerIndex();
+			if (previousSinkIndex != nextSinkIndex)
+			{
+				sinkIndices[i] = nextSinkIndex;
+				count++;
+			}
 		}
-		MeshPoint* mp = chosen[chosenIndex];
-		int previousSinkIndex = sinkIndices[i];
-		int nextSinkIndex = -1;
-		if (mp->GetDrainageSink() != nullptr)
-			nextSinkIndex = mp->GetDrainageSink()->GetContainerIndex();
-		if (previousSinkIndex != nextSinkIndex)
+		else
 		{
-			sinkIndices[i] = nextSinkIndex;
-			count++;
+			size_t chosenIndex = i;
+			MeshPoint* mp = boundary[chosenIndex];
+			int previousSinkIndex = sinkIndices[i];
+			int nextSinkIndex = -1;
+			if (mp->GetDrainageSink() != nullptr)
+				nextSinkIndex = mp->GetDrainageSink()->GetContainerIndex();
+			if (previousSinkIndex != nextSinkIndex)
+			{
+				sinkIndices[i] = nextSinkIndex;
+				count++;
+			}
 		}
+		
 	}
 	
 	return count;

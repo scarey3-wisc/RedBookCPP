@@ -27,6 +27,27 @@ MeshMidPoint::MeshMidPoint(MeshConnection* parent, bool permanent) :
 		return;
 	InitConnections(parent);
 }
+
+void 
+MeshMidPoint::ReassignTemporaryMidPoint(MeshConnection* parent)
+{
+	this->x = (parent->a->x + parent->b->x) / 2;
+	this->y = (parent->a->y + parent->b->y) / 2;
+	a = parent->a;
+	b = parent->b;
+	myWaterType = NotWater;
+	if (a->IsOcean() && b->IsOcean())
+		myWaterType = Ocean;
+	else if (a->IsInlandLake() && b->IsInlandLake())
+		myWaterType = InlandLake;
+	else if (a->IsOcean() && b->IsInlandLake())
+		myWaterType = InlandLake;
+	else if (b->IsInlandLake() && a->IsOcean())
+		myWaterType = InlandLake;
+	InitInterpolation(parent, true);
+}
+
+
 /*public MeshMidPoint(MeshConnection parent, DataInputStream dis)
 {
 	super(dis);
@@ -147,7 +168,11 @@ public boolean WriteDescription(DataOutputStream dos)
 void 
 MeshMidPoint::AveragePerlinElevDiffs(vector<double> a, vector<double> b)
 {
-	perlinElevDiffs.clear();
 	for (int i = 0; i < a.size() && i < b.size(); i++)
-		perlinElevDiffs.push_back((a[i] + b[i]) / 2);
+	{
+		if (i < perlinElevDiffs.size())
+			perlinElevDiffs[i] = (a[i] + b[i]) / 2;
+		else
+			perlinElevDiffs.push_back((a[i] + b[i]) / 2);
+	}
 }

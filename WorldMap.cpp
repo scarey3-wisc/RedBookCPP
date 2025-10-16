@@ -682,7 +682,7 @@ WorldMap::RenderVoronoiTiles(int width, int height, float regionDim, bool terrai
 
 
 void
-WorldMap::RenderRegionalData(int width, int height, float regionDim)
+WorldMap::RenderRegionalData(int width, int height, float regionDim, RegionalDataRenderMode mode)
 {
 	float left = 0.0f;
 	float right = (float)width;
@@ -714,6 +714,8 @@ WorldMap::RenderRegionalData(int width, int height, float regionDim)
 		Heightmap hm = heightmaps.GetRaster(sections[i]);
 		glm::vec2 renderLoc = sectionLocs[i];
 		float dim = regionDim / sections[i].GetNumSectionsPerSide();
+		float meterDim = RegionalMap::METER_DIM / sections[i].GetNumSectionsPerSide();
+		float mpp = meterDim / hm.DIM;
 
 		glm::vec4 color = glm::vec4(1, 1, 1, 1);
 		if (sections[i].LOD == 2)
@@ -725,7 +727,21 @@ WorldMap::RenderRegionalData(int width, int height, float regionDim)
 		else if (sections[i].LOD == 5)
 			color = glm::vec4(1, 1, 0, 1);
 		if (hm.OkayToUse())
-			regionalDataRenderer.Render(renderLoc, dim, dim, orthoProj, hm.GetRawData(), color);
+		{
+			switch (mode)
+			{
+			case BANDED_HEIGHTS:
+				regionalDataRenderer.RenderBandedHeight(renderLoc, dim, dim, orthoProj, hm.GetRawData());
+				break;
+			case HILLSHADE:
+				regionalDataRenderer.RenderHillshade(renderLoc, dim, dim, orthoProj, hm.GetRawData(), mpp);
+				break;
+			}
+			if(mode == RegionalDataRenderMode::BANDED_HEIGHTS)
+				regionalDataRenderer.RenderBandedHeight(renderLoc, dim, dim, orthoProj, hm.GetRawData());
+
+		}
+			
 	}
 
 }
@@ -813,17 +829,25 @@ WorldMap::Render(int width, int height)
 
 	float regionDim = (float)(tileSize * RegionalMap::DIMENSION);
 	// Render your map here...
-	if (Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::TERRAIN)
+	switch (Switches::CURR_PAINT_TYPE)
 	{
+	case Switches::PAINT_TYPE::TERRAIN:
 		RenderVoronoiTiles(width, height, regionDim, true);
-	}
-	else if (Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::VORONOI_PURE)
-	{
+		break;
+	case Switches::PAINT_TYPE::VORONOI_PURE:
 		RenderVoronoiTiles(width, height, regionDim, false);
-	}
-	else if(Switches::CURR_PAINT_TYPE == Switches::PAINT_TYPE::ELEVATION_CURR)
-	{
-		RenderRegionalData(width, height, regionDim);
+		break;
+	case Switches::PAINT_TYPE::ELEVATION_CURR:
+		RenderRegionalData(width, height, regionDim, RegionalDataRenderMode::BANDED_HEIGHTS);
+		break;
+	case Switches::PAINT_TYPE::ELEV_GRADIENT:
+		RenderRegionalData(width, height, regionDim, RegionalDataRenderMode::HILLSHADE);
+		break;
+	case Switches::PAINT_TYPE::CONTOUR:
+		RenderRegionalData(width, height, regionDim, RegionalDataRenderMode::CONTOUR);
+		break;
+	default:
+		break;
 	}
 	if (Switches::OUTLINE_MAPS)
 	{

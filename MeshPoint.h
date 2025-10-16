@@ -52,6 +52,7 @@ public:
 
 	size_t GetNumAdjacent()
 	{
+		std::shared_lock lock(adjMutex);
 		return adjacent.size();
 	}
 	bool AdjacentContains(MeshPoint* p);

@@ -173,6 +173,7 @@
     <ClInclude Include="RegionalMap.h" />
     <ClInclude Include="RenderUtils.h" />
     <ClInclude Include="SamplePoint.h" />
+    <ClInclude Include="ShaderSource.h" />
     <ClInclude Include="Switches.h" />
     <ClInclude Include="TerrainTemplate.h" />
     <ClInclude Include="TerrainType.h" />

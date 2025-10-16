@@ -83,8 +83,9 @@ MeshConnection::GetMidOrTempMid()
 	if (mid != nullptr)
 		return mid;
 	if (temporaryMid.has_value())
-		temporaryMid.reset();
-	temporaryMid.emplace(this, false);
+		temporaryMid->ReassignTemporaryMidPoint(this);
+	else
+		temporaryMid.emplace(this, false);
 	return &*temporaryMid;
 }
 /*public MeshMidPoint GetMid(DataInputStream dis)
@@ -107,6 +108,7 @@ public MeshMidPoint GetMid(Iterator<String> tokenStream)
 MeshConnection* 
 MeshConnection::FindConnection(MeshPoint* a, MeshPoint* b)
 {
+	std::cout << "";
 	MeshConnection* check = a->GetConnection(b);
 	if (check == nullptr)
 		check = b->GetConnection(a);

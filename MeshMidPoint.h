@@ -8,6 +8,7 @@ class MeshMidPoint : public MeshPoint
 {
 public:
 	MeshMidPoint(MeshConnection* parent, bool permanent);
+	void ReassignTemporaryMidPoint(MeshConnection* parent);
 	MeshPoint* GetParentA() { return a; }
 	MeshPoint* GetParentB() { return b; }
 

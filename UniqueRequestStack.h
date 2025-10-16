@@ -88,9 +88,10 @@ public:
 		}
 	}
 
-	// Destructor to stop the thread pool
-	~RequestStack()
+	void TerminateThreads()
 	{
+		if(stop)
+			return;
 		{
 			// Lock the queue to update the stop flag safely
 			std::unique_lock<std::mutex> lock(queue_mutex);
@@ -105,6 +106,12 @@ public:
 		for (auto& thread : threads) {
 			thread.join();
 		}
+	}
+
+	// Destructor to stop the thread pool
+	~RequestStack()
+	{
+		TerminateThreads();
 	}
 
 	// Enqueue task for execution by the thread pool

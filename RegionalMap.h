@@ -112,7 +112,8 @@ public:
 
 	inline static constexpr int VORONOI_DIM = 192;
 	inline static constexpr double MIN_VORONOI_DIST = 1.41421356237 / VORONOI_DIM;
-	inline static constexpr int DIMENSION = 1 << (REGIONAL_MAP_NUM_LODS - 1); //2^4 = 16
+	inline static constexpr int DIMENSION = 1 << (5 - 1); //2^4 = 16
+	inline static constexpr int METER_DIM = LocalMap::METER_DIM * DIMENSION; //how many meters on a side is a RegionalMap?
 	//if a RegionalMap gets negative coordinates, bad things happen to Perlin RNG
 	inline static int ORIGIN_OFFSET = 500;
 	inline static constexpr const char* K_HEIGHTMAP_FOLDER_NAME = "Local_Heights_";

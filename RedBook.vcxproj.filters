@@ -216,6 +216,9 @@
     <ClInclude Include="ContinentGenAlgorithms.h">
       <Filter>Algorithms\Headers</Filter>
     </ClInclude>
+    <ClInclude Include="ShaderSource.h">
+      <Filter>RenderMethods\Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Utilities">

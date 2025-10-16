@@ -382,7 +382,7 @@ RedBookInitWorld()
     cout << "Tectonic Uplift Algo: Detail-0" << endl;
     ContinentGenAlgorithms::RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
     cout << endl;
-   // VoronoiAlgorithms::IncreaseFractureLevel(continent);
+    VoronoiAlgorithms::IncreaseFractureLevel(continent);
     cout << "Tectonic Uplift Algo: Detail-1" << endl;
     ContinentGenAlgorithms::RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
 	cout << endl;
@@ -542,6 +542,8 @@ int WINAPI WinMain(
 
         glfwSwapBuffers(window);
     }
+    myWorldMap->myWorkerThread.DiscardAllWaitingTasks();
+    myWorldMap->myWorkerThread.TerminateThreads();
 
     delete myWorldMap;
     // Cleanup
