@@ -5,7 +5,7 @@
 #include <array>
 
 inline static constexpr int REGIONAL_DATA_DIM = 256;
-inline static constexpr int REGIONAL_MAP_NUM_LODS = 7; //1, 2, 4, 8, 16; remember, a LOD is "how many 256 pixel heightmaps fill the regional map?
+inline static constexpr int REGIONAL_MAP_NUM_LODS = 5; //1, 2, 4, 8, 16; remember, a LOD is "how many 256 pixel heightmaps fill the regional map?
 
 
 

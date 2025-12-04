@@ -144,6 +144,7 @@
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="MatrixOps.h" />
     <ClInclude Include="MultigridMesh.h" />
+    <ClInclude Include="MultigridOps.h" />
     <ClInclude Include="SolverDataOld.h" />
     <ClInclude Include="SolverData.h" />
   </ItemGroup>

@@ -7,20 +7,20 @@
 #include <limits>
 #include <numbers>
 
-#include "..\HydrologySolver\SolverDataLevel.h"
+#include "..\HydrologySolver\SolverData.h"
 
 template<int e>
 void
 Visualize(std::filesystem::path outPath, SolverData<e>& data, int mode)
 {
     std::ofstream out(outPath.c_str());
-    out << "P3\n" << data.w << " " << data.h << "\n255\n";
+    out << "P3\n" << data.wO << " " << data.hO << "\n255\n";
     double minB = std::numeric_limits<double>::max();
     double maxB = std::numeric_limits<double>::min();
     double minW = std::numeric_limits<double>::max();
     double maxW = std::numeric_limits<double>::min();
-    for (int y = 0; y < data.h; ++y) {
-        for (int x = 0; x < data.w; ++x) {
+    for (int y = 0; y < data.hO; ++y) {
+        for (int x = 0; x < data.wO; ++x) {
             if (data.GetW(x, y) < minW)
                 minW = data.GetW(x, y);
             if (data.GetW(x, y) > maxW)
@@ -44,8 +44,8 @@ Visualize(std::filesystem::path outPath, SolverData<e>& data, int mode)
     }
     minW = 0;
     std::cout << "B range: " << minB << " - " << maxB << ", W range: " << minW << " - " << maxW << std::endl;
-    for (int y = 0; y < data.h; ++y) {
-        for (int x = 0; x < data.w; ++x) {
+    for (int y = 0; y < data.hO; ++y) {
+        for (int x = 0; x < data.wO; ++x) {
             double w = (data.GetW(x, y) - minW) / (maxW - minW);
             double t = 0;
             if(maxB > minB)
@@ -108,41 +108,41 @@ int main(int argc, char** argv)
     std::filesystem::path exeDir = exePath.parent_path();
     std::filesystem::path topDir = exeDir.parent_path().parent_path().parent_path();
     std::filesystem::path outPath = topDir;
-    SolverData<dim> myData(9.8, 0.1, 40);
+    SolverData<dim> myData(9.8, 0.1, 400. / ((1 >> dim) + 1));
 
-    for (int j = 0; j < myData.h; j++)
+    for (int j = 0; j < myData.hO; j++)
     {
-        for (int i = 0; i < myData.w; i++)
+        for (int i = 0; i < myData.wO; i++)
         {
             double base = 0.01;
-            double mainValley = 20.0 * std::abs(myData.w * 0.5 - i) / myData.w;
-            double slightSlope = 20.0 * (j + 1.0) / myData.h;
-            double sideValley = 0.5 + 0.5 * std::sin(8 * std::numbers::pi * j / myData.h);
-            sideValley *= 0.15 * mainValley * mainValley;
+            double mainValley = 40.0 * std::abs(myData.wO * 0.5 - i) / myData.wO;
+            double slightSlope = 40.0 * (j + 1.0) / myData.hO;
+            double sideValley = 0.5 + 0.5 * std::sin(8 * std::numbers::pi * j / myData.hO);
+            sideValley *= 0.07 * mainValley * mainValley;
 
             double lake = 0;
-            if((i > .45 * myData.w && i < .55 * myData.w) &&
-               (j > .42 * myData.h && j < .58 * myData.h))
+            if((i > .25 * myData.wO && i < .32 * myData.wO) &&
+               (j > .34 * myData.hO && j < .55 * myData.hO))
             {
-                lake = -5.0;
+                lake = -4.0;
 			}
             myData.SetB(i, j, base + mainValley + slightSlope + sideValley + lake);
             //myData.SetB(i, j, 1);
             myData.SetW(i, j, 0);
         }
     }
-    for (int j = 1; j < myData.h - 1; j++)
+    for (int j = 1; j < myData.hO - 1; j++)
     {
-        for (int i = 1; i < myData.w - 1; i++)
+        for (int i = 1; i < myData.wO - 1; i++)
         {
-            myData.SetR(i, j, 0.000000049 * 300);
+            myData.SetR(i, j, 0.000000049);
             myData.SetW(i, j, 1);
         }
     }
     outPath.append("test.ppm");
 
     //myData.SolveWithPseudoMultigrid(1e-10, 0, 10000, 2000, 1);
-	myData.SolveWithPARDISO(1e-10, 0, 10000, 1);
+	myData.SolveWithPARDISO(1e-10, 0, 10000.0, 1);
     outPath.replace_filename("waterways.ppm");
     Visualize<dim>(outPath, myData, 0);
     outPath.replace_filename("terrain.ppm");

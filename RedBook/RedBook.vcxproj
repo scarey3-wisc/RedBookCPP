@@ -156,6 +156,7 @@
     <ClInclude Include="external\imgui\imstb_rectpack.h" />
     <ClInclude Include="external\imgui\imstb_textedit.h" />
     <ClInclude Include="external\imgui\imstb_truetype.h" />
+    <ClInclude Include="FluidSolver.h" />
     <ClInclude Include="GlobalRand.h" />
     <ClInclude Include="HashUtils.h" />
     <ClInclude Include="Heightmap.h" />
@@ -197,6 +198,7 @@
     <ClCompile Include="external\imgui\imgui_draw.cpp" />
     <ClCompile Include="external\imgui\imgui_tables.cpp" />
     <ClCompile Include="external\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="FluidSolver.cpp" />
     <ClCompile Include="Heightmap.cpp" />
     <ClCompile Include="LocalMap.cpp" />
     <ClCompile Include="MeshConnection.cpp" />
@@ -217,6 +219,11 @@
     <ClCompile Include="VoronoiRendering.cpp" />
     <ClCompile Include="WaterDroplet.cpp" />
     <ClCompile Include="WorldMap.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HydrologySolver\HydrologySolver.vcxproj">
+      <Project>{4ff21861-785f-4a93-936f-031ec6df0910}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

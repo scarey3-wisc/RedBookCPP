@@ -36,5 +36,8 @@
     <ClInclude Include="CSRMatrix.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MultigridOps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

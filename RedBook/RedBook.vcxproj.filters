@@ -88,6 +88,9 @@
     <ClCompile Include="ContinentGenAlgorithms.cpp">
       <Filter>Algorithms\Source</Filter>
     </ClCompile>
+    <ClCompile Include="FluidSolver.cpp">
+      <Filter>Algorithms\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\imgui\imconfig.h">
@@ -218,6 +221,9 @@
     </ClInclude>
     <ClInclude Include="ShaderSource.h">
       <Filter>RenderMethods\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="FluidSolver.h">
+      <Filter>Algorithms\Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
