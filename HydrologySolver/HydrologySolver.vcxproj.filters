@@ -18,16 +18,23 @@
     <ClInclude Include="DataPointer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SolverDataOld.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MultigridMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Matrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MatrixOps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="SolverData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="DataPointer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SolverData.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClInclude Include="CSRMatrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

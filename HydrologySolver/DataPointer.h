@@ -22,7 +22,7 @@ public:
 
 //-----------------------------------------------------------------------------
 
-	inline double Get(int x, int y)
+	inline double Get(int x, int y) const
 	{
 		return ptr[y * w + x];
 	}
@@ -32,6 +32,13 @@ public:
 	inline void Set(int x, int y, double v)
 	{
 		ptr[y * w + x] = v;
+	}
+
+//-----------------------------------------------------------------------------
+
+	inline void Add(int x, int y, double v)
+	{
+		ptr[y * w + x] += v;
 	}
 
 //-----------------------------------------------------------------------------
@@ -51,7 +58,7 @@ public:
 
 //-----------------------------------------------------------------------------
 
-	void Set(double value)
+	void SetAll(double value)
 	{
 		std::fill(ptr, ptr + w * h, value);
 	}
@@ -96,10 +103,25 @@ public:
 			}
 		}
 	}
+
+	// Disable copying:
+	DataPointer(const DataPointer&) = delete;
+	DataPointer& operator=(const DataPointer&) = delete;
+
+//-----------------------------------------------------------------------------
+
+	double* GetRawPtr()
+	{
+		return ptr;
+	}
+
+//-----------------------------------------------------------------------------
+
 private:
 	DataPointer()
 	{
 		ptr = new double[w * h];
+		SetAll(0);
 	}
 private:
 	double* ptr;
