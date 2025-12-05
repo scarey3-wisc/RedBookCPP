@@ -1,6 +1,7 @@
 // HydrologyApp.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
+#include "..\HydrologySolver\Globals.h"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -100,7 +101,7 @@ Visualize(std::filesystem::path outPath, SolverData<e>& data, int mode)
 
 }
 
-static constexpr int dim = 8;
+static constexpr int dim = 10;
 
 int main(int argc, char** argv)
 {
@@ -108,7 +109,9 @@ int main(int argc, char** argv)
     std::filesystem::path exeDir = exePath.parent_path();
     std::filesystem::path topDir = exeDir.parent_path().parent_path().parent_path();
     std::filesystem::path outPath = topDir;
-    SolverData<dim> myData(9.8, 0.1, 400. / ((1 >> dim) + 1));
+    MY_PATH = outPath;
+	MY_PATH.append("output");
+    SolverData<dim> myData(9.8, 0.1, 400.0 / ((1 >> dim) + 1.0));
 
     for (int j = 0; j < myData.hO; j++)
     {
@@ -141,8 +144,27 @@ int main(int argc, char** argv)
     }
     outPath.append("test.ppm");
 
-    //myData.SolveWithPseudoMultigrid(1e-10, 0, 10000, 2000, 1);
-	myData.SolveWithPARDISO(1e-10, 0, 10000.0, 1);
+#ifdef USE_PARDISO
+	std::cout << "SOLVING GRID SIZE " << myData.hI << " WITH PARDISO" << std::endl;
+    myData.SolveWithPARDISO(1e-10, 0, 10000.0, 1);
+#else
+#ifdef USE_PRESMOOTHED_MULTIGRID
+    std::cout << "SOLVING GRID SIZE " << myData.hI << " WITH PRE-SMOOTHED MULTIGRID" << std::endl;
+    myData.SolveWithMultigrid(1e-10, 0, 10000.0, 2, 2000, 1);
+#else
+#ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
+    std::cout << "SOLVING GRID SIZE " << myData.hI << " WITH PRE-SMOOTHED GAUSS SEIDEL" << std::endl;
+    myData.SolveWithPseudoMultigrid(1e-10, 0, 10000, 2000, 1);
+#else
+#ifdef USE_PURE_GAUSS_SEIDEL
+    std::cout << "SOLVING GRID SIZE " << myData.hI << " WITH PURE GAUSS SEIDEL" << std::endl;
+    myData.SolveWithGaussSeidel(1e-10, 0, 10000.0, 2000, 1);
+#endif
+#endif
+#endif
+#endif
+	
+	
     outPath.replace_filename("waterways.ppm");
     Visualize<dim>(outPath, myData, 0);
     outPath.replace_filename("terrain.ppm");

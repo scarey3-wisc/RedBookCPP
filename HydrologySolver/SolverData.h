@@ -1,11 +1,19 @@
 #pragma once
+#include "OperationModes.h"
 
 
 #include "MatrixOps.h"
+#include "MultigridOps.h"
 #include "CSRMatrix.h"
+
+#ifdef USE_PARDISO
 #include "mkl.h"
+#endif
+
 #include <iostream>
 #include <omp.h>
+#include <limits>
+#include "Globals.h"
 
 template <int e>
 class SolverDataBase
@@ -23,8 +31,11 @@ public:
 		J_xp(DataPointer<wI, hI>::AllocateNewPointer()),
 		J_xm(DataPointer<wI, hI>::AllocateNewPointer()),
 		J_yp(DataPointer<wI, hI>::AllocateNewPointer()),
-		J_ym(DataPointer<wI, hI>::AllocateNewPointer()),
+		J_ym(DataPointer<wI, hI>::AllocateNewPointer())
+#ifdef USE_PARDISO
+		,
 		JS(FiveStencilCSRMatrix<wI, hI>::AllocateNewPointer())
+#endif
 	{
 
 	}
@@ -44,7 +55,9 @@ public:
 		J_xm.Deallocate();
 		J_yp.Deallocate();
 		J_ym.Deallocate();
+#ifdef USE_PARDISO
 		JS.Deallocate();
+#endif
 	}
 
 	// Disable copying:
@@ -101,7 +114,85 @@ public:
 
 //-----------------------------------------------------------------------------
 
+	void ComputeResidualIntoO()
+	{
+#pragma omp parallel for
+		for (int j = 0; j < hI; j++)
+		{
+			for (int i = 0; i < wI; i++)
+			{
+				double result = J_cc.Get(i, j) * U.Get(i, j);
+				if (i > 0)
+					result += J_xm.Get(i, j) * U.Get(i - 1, j);
+				if (i < wI - 1)
+					result += J_xp.Get(i, j) * U.Get(i + 1, j);
+				if (j > 0)
+					result += J_ym.Get(i, j) * U.Get(i, j - 1);
+				if (j < hI - 1)
+					result += J_yp.Get(i, j) * U.Get(i, j + 1);
+
+				result -= F.Get(i, j);
+				result *= -1;
+				O.Set(i, j, result);
+			}
+		}
+	}
+
+//-----------------------------------------------------------------------------
+
+	void CalculateF()
+	{
+#pragma omp parallel for
+		for (int j = 1; j < hO - 1; j++)
+		{
+			for (int i = 1; i < wO - 1; i++)
+			{
+				double del = GetR(i, j);
+				del -= Flux(i, j, i + 1, j) / s2;
+				del -= Flux(i, j, i - 1, j) / s2;
+				del -= Flux(i, j, i, j + 1) / s2;
+				del -= Flux(i, j, i, j - 1) / s2;
+				F.Set(i - 1, j - 1, del);
+			}
+		}
+	}
+
+//-----------------------------------------------------------------------------
+
+	void CalculateJ()
+	{
+#pragma omp parallel for
+		for (int j = 1; j < hO - 1; j++)
+		{
+			for (int i = 1; i < wO - 1; i++)
+			{
+				double daxp = DFluxDA(i, j, i + 1, j);
+				double daxm = DFluxDA(i, j, i - 1, j);
+				double dayp = DFluxDA(i, j, i, j + 1);
+				double daym = DFluxDA(i, j, i, j - 1);
+				J_cc.Set(i - 1, j - 1, -1 * (daxp + daxm + dayp + daym) / s2);
+				J_xp.Set(i - 1, j - 1, -1 * DFluxDB(i, j, i + 1, j) / s2);
+				J_xm.Set(i - 1, j - 1, -1 * DFluxDB(i, j, i - 1, j) / s2);
+				J_yp.Set(i - 1, j - 1, -1 * DFluxDB(i, j, i, j + 1) / s2);
+				J_ym.Set(i - 1, j - 1, -1 * DFluxDB(i, j, i, j - 1) / s2);
+			}
+		}
+	}
+
+//-----------------------------------------------------------------------------
+
+
+#ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
 	virtual void SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity) = 0;
+#endif
+
+#ifdef USE_PRESMOOTHED_MULTIGRID
+	virtual void SolveWithMultigrid(double maxNorm, double minValue, double maxValue, int maxVCycles, int maxGSItr, int verbosity) = 0;
+
+	virtual void PrepareMultigridJacobians() = 0;
+
+	virtual void VCycle(double maxGSNorm, int maxGSItr, int gsItrDown, int gsItrUp) = 0;
+#endif
 
 //-----------------------------------------------------------------------------
 
@@ -134,7 +225,7 @@ public:
 					break;
 			}
 
-			if (gsItr > 0)
+			if (gsItr > 0 && verbosity > 0)
 				std::cout << ", requiring " << gsItr << " GS iterations";
 			double correctionNorm = U.Norm();
 			if (verbosity > 0)
@@ -148,6 +239,7 @@ public:
 
 //-----------------------------------------------------------------------------
 
+#ifdef USE_PARDISO
 	void SolveWithPARDISO(double maxNorm, double minValue, double maxValue, int verbosity)
 	{
 		int itr = 0;
@@ -178,215 +270,7 @@ public:
 			itr++;
 		}
 	}
-
-//-----------------------------------------------------------------------------
-
-	void RestrictRBWSimple(SolverDataBase<e - 1>& coarse)
-	{
-		for (int i = 0; i < coarse.wO; i++)
-		{
-			for (int j = 0; j < coarse.hO; j++)
-			{
-				coarse.SetB(i, j, GetB(2 * i, 2 * j));
-				coarse.SetR(i, j, GetR(2 * i, 2 * j));
-				coarse.SetW(i, j, GetW(2 * i, 2 * j));
-			}
-		}
-	}
-
-//-----------------------------------------------------------------------------
-
-	void RestrictRBWTo(SolverDataBase<e - 1>& coarse)
-	{
-		for (int i = 0; i < coarse.wO; i++)
-		{
-			for (int j = 0; j < coarse.hO; j++)
-			{
-				if (i == 0 && j == 0)
-				{
-					coarse.SetB(i, j, GetB(2 * i, 2 * j));
-					coarse.SetR(i, j, GetR(2 * i, 2 * j));
-					coarse.SetW(i, j, GetW(2 * i, 2 * j));
-				}
-				else if (i == 0 && j == coarse.hO - 1)
-				{
-					coarse.SetB(i, j, GetB(2 * i, 2 * j));
-					coarse.SetR(i, j, GetR(2 * i, 2 * j));
-					coarse.SetW(i, j, GetW(2 * i, 2 * j));
-				}
-				else if (i == coarse.wO - 1 && j == 0)
-				{
-					coarse.SetB(i, j, GetB(2 * i, 2 * j));
-					coarse.SetR(i, j, GetR(2 * i, 2 * j));
-					coarse.SetW(i, j, GetW(2 * i, 2 * j));
-				}
-				else if (i == coarse.wO - 1 && j == coarse.hO - 1)
-				{
-					coarse.SetB(i, j, GetB(2 * i, 2 * j));
-					coarse.SetR(i, j, GetR(2 * i, 2 * j));
-					coarse.SetW(i, j, GetW(2 * i, 2 * j));
-				}
-				else if (i == 0)
-				{
-					double bVal = 0;
-					bVal += GetB(2 * i, 2 * j - 1) / 4;
-					bVal += GetB(2 * i, 2 * j) / 2;
-					bVal += GetB(2 * i, 2 * j + 1) / 4;
-					coarse.SetB(i, j, bVal);
-
-					double rVal = 0;
-					rVal += GetR(2 * i, 2 * j - 1) / 4;
-					rVal += GetR(2 * i, 2 * j) / 2;
-					rVal += GetR(2 * i, 2 * j + 1) / 4;
-					coarse.SetR(i, j, rVal);
-
-					double wVal = 0;
-					wVal += GetB(2 * i, 2 * j - 1) / 4;
-					wVal += GetB(2 * i, 2 * j) / 2;
-					wVal += GetB(2 * i, 2 * j + 1) / 4;
-					coarse.SetB(i, j, wVal);
-				}
-				else if (i == coarse.wO - 1)
-				{
-					double bVal = 0;
-					bVal += GetB(2 * i, 2 * j - 1) / 4;
-					bVal += GetB(2 * i, 2 * j) / 2;
-					bVal += GetB(2 * i, 2 * j + 1) / 4;
-					coarse.SetB(i, j, bVal);
-
-					double rVal = 0;
-					rVal += GetR(2 * i, 2 * j - 1) / 4;
-					rVal += GetR(2 * i, 2 * j) / 2;
-					rVal += GetR(2 * i, 2 * j + 1) / 4;
-					coarse.SetR(i, j, rVal);
-
-					double wVal = 0;
-					wVal += GetB(2 * i, 2 * j - 1) / 4;
-					wVal += GetB(2 * i, 2 * j) / 2;
-					wVal += GetB(2 * i, 2 * j + 1) / 4;
-					coarse.SetB(i, j, wVal);
-				}
-				else if (j == 0)
-				{
-					double bVal = 0;
-					bVal += GetB(2 * i - 1, 2 * j) / 4;
-					bVal += GetB(2 * i, 2 * j) / 2;
-					bVal += GetB(2 * i + 1, 2 * j) / 4;
-					coarse.SetB(i, j, bVal);
-
-					double rVal = 0;
-					rVal += GetR(2 * i - 1, 2 * j) / 4;
-					rVal += GetR(2 * i, 2 * j) / 2;
-					rVal += GetR(2 * i + 1, 2 * j) / 4;
-					coarse.SetR(i, j, rVal);
-
-					double wVal = 0;
-					wVal += GetW(2 * i - 1, 2 * j) / 4;
-					wVal += GetW(2 * i, 2 * j) / 2;
-					wVal += GetW(2 * i + 1, 2 * j) / 4;
-					coarse.SetW(i, j, wVal);
-				}
-				else if (j == coarse.hO - 1)
-				{
-					double bVal = 0;
-					bVal += GetB(2 * i - 1, 2 * j) / 4;
-					bVal += GetB(2 * i, 2 * j) / 2;
-					bVal += GetB(2 * i + 1, 2 * j) / 4;
-					coarse.SetB(i, j, bVal);
-
-					double rVal = 0;
-					rVal += GetR(2 * i - 1, 2 * j) / 4;
-					rVal += GetR(2 * i, 2 * j) / 2;
-					rVal += GetR(2 * i + 1, 2 * j) / 4;
-					coarse.SetR(i, j, rVal);
-
-					double wVal = 0;
-					wVal += GetW(2 * i - 1, 2 * j) / 4;
-					wVal += GetW(2 * i, 2 * j) / 2;
-					wVal += GetW(2 * i + 1, 2 * j) / 4;
-					coarse.SetW(i, j, wVal);
-				}
-				else
-				{
-					double bVal = 0;
-					bVal += GetB(2 * i - 1, 2 * j - 1) / 16;
-					bVal += GetB(2 * i, 2 * j - 1) / 8;
-					bVal += GetB(2 * i + 1, 2 * j - 1) / 16;
-					bVal += GetB(2 * i - 1, 2 * j) / 8;
-					bVal += GetB(2 * i, 2 * j) / 4;
-					bVal += GetB(2 * i + 1, 2 * j) / 8;
-					bVal += GetB(2 * i - 1, 2 * j + 1) / 16;
-					bVal += GetB(2 * i, 2 * j + 1) / 8;
-					bVal += GetB(2 * i + 1, 2 * j + 1) / 16;
-					coarse.SetB(i, j, bVal);
-
-					double rVal = 0;
-					rVal += GetR(2 * i - 1, 2 * j - 1) / 16;
-					rVal += GetR(2 * i, 2 * j - 1) / 8;
-					rVal += GetR(2 * i + 1, 2 * j - 1) / 16;
-					rVal += GetR(2 * i - 1, 2 * j) / 8;
-					rVal += GetR(2 * i, 2 * j) / 4;
-					rVal += GetR(2 * i + 1, 2 * j) / 8;
-					rVal += GetR(2 * i - 1, 2 * j + 1) / 16;
-					rVal += GetR(2 * i, 2 * j + 1) / 8;
-					rVal += GetR(2 * i + 1, 2 * j + 1) / 16;
-					coarse.SetR(i, j, rVal);
-
-					double wVal = 0;
-					wVal += GetW(2 * i - 1, 2 * j - 1) / 16;
-					wVal += GetW(2 * i, 2 * j - 1) / 8;
-					wVal += GetW(2 * i + 1, 2 * j - 1) / 16;
-					wVal += GetW(2 * i - 1, 2 * j) / 8;
-					wVal += GetW(2 * i, 2 * j) / 4;
-					wVal += GetW(2 * i + 1, 2 * j) / 8;
-					wVal += GetW(2 * i - 1, 2 * j + 1) / 16;
-					wVal += GetW(2 * i, 2 * j + 1) / 8;
-					wVal += GetW(2 * i + 1, 2 * j + 1) / 16;
-					coarse.SetW(i, j, wVal);
-				}
-			}
-		}
-	}
-
-//-----------------------------------------------------------------------------
-
-	void InterpolateWFrom(SolverDataBase<e - 1>& coarse)
-	{
-		for (int j = 1; j < hO - 1; j++)
-		{
-			for (int i = 1; i < wO - 1; i++)
-			{
-				double value = 0;
-				int ci = i / 2;
-				int cj = j / 2;
-				if( i % 2 == 0 && j % 2 == 0)
-				{
-					value = coarse.GetW(ci, cj);
-					SetW(i, j, value);
-				}
-				else if (i % 2 == 0)
-				{
-					value += coarse.GetW(ci, cj) * 0.5;
-					value += coarse.GetW(ci, cj + 1) * 0.5;
-					SetW(i, j, value);
-				}
-				else if (j % 2 == 0)
-				{
-					value += coarse.GetW(ci, cj) * 0.5;
-					value += coarse.GetW(ci + 1, cj) * 0.5;
-					SetW(i, j, value);
-				}
-				else
-				{
-					value += coarse.GetW(ci, cj) * 0.25;
-					value += coarse.GetW(ci + 1, cj) * 0.25;
-					value += coarse.GetW(ci, cj + 1) * 0.25;
-					value += coarse.GetW(ci + 1, cj + 1) * 0.25;
-					SetW(i, j, value);
-				}
-			}
-		}
-	}
+#endif	
 
 //-----------------------------------------------------------------------------
 
@@ -397,10 +281,36 @@ public:
 		GaussSeidelIterationOnEvenPoints();
 	}
 
+//-----------------------------------------------------------------------------
+
+	void GaussSeidelIteration()
+	{
+
+		//Red Iteration
+#pragma omp parallel for
+		for (int j = 0; j < hI; j++)
+		{
+			for (int i = j % 2; i < wI; i += 2)
+			{
+				SmoothIndex(i, j);
+			}
+		}
+#pragma omp parallel for
+		//Black Iteration
+		for (int j = 0; j < hI; j++)
+		{
+			for (int i = 1 - j % 2; i < wI; i += 2)
+			{
+				SmoothIndex(i, j);
+			}
+		}
+	}
+
 private:
 
 //-----------------------------------------------------------------------------
 
+#ifdef USE_PARDISO
 	void SolveSparseSystemWithPARDISO(int matrixSize, double* vals, int* rowOffsets, int* colIndices, double* x, double* f, bool verbose)
 	{
 
@@ -515,6 +425,7 @@ private:
 			&ddum, rowOffsets, colIndices,
 			&idum, &nrhs, iparm, &msglvl, &ddum, &ddum, &error);
 	}
+#endif
 
 //-----------------------------------------------------------------------------
 
@@ -599,98 +510,6 @@ private:
 	}
 
 //-----------------------------------------------------------------------------
-
-	void GaussSeidelIteration()
-	{
-
-		//Red Iteration
-#pragma omp parallel for
-		for (int j = 0; j < hI; j++)
-		{
-			for (int i = j % 2; i < wI; i += 2)
-			{
-				SmoothIndex(i, j);
-			}
-		}
-#pragma omp parallel for
-		//Black Iteration
-		for (int j = 0; j < hI; j++)
-		{
-			for (int i = 1 - j % 2; i < wI; i += 2)
-			{
-				SmoothIndex(i, j);
-			}
-		}
-	}
-	
-//-----------------------------------------------------------------------------
-
-	void ComputeResidualIntoO()
-	{
-#pragma omp parallel for
-		for (int j = 0; j < hI; j++)
-		{
-			for (int i = 0; i < wI; i++)
-			{
-				double result = J_cc.Get(i, j) * U.Get(i, j);
-				if (i > 0)
-					result += J_xm.Get(i, j) * U.Get(i - 1, j);
-				if (i < wI - 1)
-					result += J_xp.Get(i, j) * U.Get(i + 1, j);
-				if (j > 0)
-					result += J_ym.Get(i, j) * U.Get(i, j - 1);
-				if (j < hI - 1)
-					result += J_yp.Get(i, j) * U.Get(i, j + 1);
-
-				result -= F.Get(i, j);
-				result *= -1;
-				O.Set(i, j, result);
-			}
-		}
-	}
-
-//-----------------------------------------------------------------------------
-
-	void CalculateF()
-	{
-#pragma omp parallel for
-		for (int j = 1; j < hO - 1; j++)
-		{
-			for (int i = 1; i < wO - 1; i++)
-			{
-				double del = GetR(i, j);
-				del -= Flux(i, j, i + 1, j) / s2;
-				del -= Flux(i, j, i - 1, j) / s2;
-				del -= Flux(i, j, i, j + 1) / s2;
-				del -= Flux(i, j, i, j - 1) / s2;
-				F.Set(i - 1, j - 1, del);
-			}
-		}
-	}
-
-//-----------------------------------------------------------------------------
-
-	void CalculateJ()
-	{
-#pragma omp parallel for
-		for (int j = 1; j < hO - 1; j++)
-		{
-			for (int i = 1; i < wO - 1; i++)
-			{
-				double daxp = DFluxDA(i, j, i + 1, j);
-				double daxm = DFluxDA(i, j, i - 1, j);
-				double dayp = DFluxDA(i, j, i, j + 1);
-				double daym = DFluxDA(i, j, i, j - 1);
-				J_cc.Set(i - 1, j - 1, -1 * (daxp + daxm + dayp + daym) / s2);
-				J_xp.Set(i - 1, j - 1, -1 * DFluxDB(i, j, i + 1, j) / s2);
-				J_xm.Set(i - 1, j - 1, -1 * DFluxDB(i, j, i - 1, j) / s2);
-				J_yp.Set(i - 1, j - 1, -1 * DFluxDB(i, j, i, j + 1) / s2);
-				J_ym.Set(i - 1, j - 1, -1 * DFluxDB(i, j, i, j - 1) / s2);
-			}
-		}
-	}
-
-//-----------------------------------------------------------------------------
 	
 	// Returns a positive value if flux is flowing from (ax, ay) to (bx, by)
 	double Flux(int ax, int ay, int bx, int by)
@@ -732,8 +551,7 @@ private:
 			return -fc * (GetW(ax, ay) + GetW(bx, by)) / 2;
 	}
 
-
-private:
+public:
 	DataPointer<wO, hO> B; //Bed Height and boundary condition vectors
 	DataPointer<wO, hO> W; //Water Height and boundary condition vectors
 	DataPointer<wO, hO> R; //Rainfall Values
@@ -747,7 +565,6 @@ private:
 	* corresponding to one spoke of the 5 point stencil.
 	* We store each diagonal (each spoke of the stencil) in a separate
 	* DataPointer for maximum efficiency in sparsity
-	*
 	*/
 	DataPointer<wI, hI> J_cc; //Center
 	DataPointer<wI, hI> J_xp; //i+1, j
@@ -755,7 +572,9 @@ private:
 	DataPointer<wI, hI> J_yp; //i, j+1
 	DataPointer<wI, hI> J_ym; //i, j-1
 
+#ifdef USE_PARDISO
 	FiveStencilCSRMatrix<wI, hI> JS;
+#endif
 };
 
 template <int e>
@@ -763,36 +582,174 @@ class SolverData : public SolverDataBase<e>
 {
 public:
 	SolverData(double gravity, double drag, double spacing) :
-		SolverDataBase<e>(gravity, drag, spacing),
+		SolverDataBase<e>(gravity, drag, spacing)
+#ifdef RECURSIVE_STRUCTURE_REQUIRED
+		,
 		child(gravity, drag, spacing * 2)
+#endif
 	{
 
 	}
+
+#ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
 	void SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity)
 	{
-		this->RestrictRBWSimple(child);
+		MultigridOps::RestrictSimple<e>(this->R, child.R);
+		MultigridOps::RestrictSimple<e>(this->B, child.B);
+		MultigridOps::RestrictSimple<e>(this->W, child.W);
 		child.SolveWithPseudoMultigrid(maxNorm, minValue, maxValue, maxItr, verbosity);
-		this->InterpolateWFrom(child);
+		MultigridOps::Interpolate<e>(this->W, child.W);
 		this->GaussSeidelIterationPostInterpolation();
 
 		std::cout << "Solving on Mesh level " << e << std::endl;
 		this->SolveWithGaussSeidel(maxNorm, minValue, maxValue, maxItr, verbosity);
 	}
+#endif
+
+//-----------------------------------------------------------------------------
+
+#ifdef USE_PRESMOOTHED_MULTIGRID
+	void SolveWithMultigrid(double maxNorm, double minValue, double maxValue, int maxVCycles, int maxGSItr, int verbosity)
+	{
+		MultigridOps::RestrictSimple<e>(this->R, child.R);
+		MultigridOps::RestrictSimple<e>(this->B, child.B);
+		MultigridOps::RestrictSimple<e>(this->W, child.W);
+		child.SolveWithMultigrid(maxNorm, minValue, maxValue, maxVCycles, maxGSItr, verbosity);
+		MultigridOps::Interpolate<e>(this->W, child.W);
+		this->GaussSeidelIterationPostInterpolation();
+
+		std::cout << "Solving on Mesh level " << e << std::endl;
+
+		int itr = 0;
+		while (true)
+		{
+			if (verbosity > 0)
+				std::cout << "Newton Itr " << itr;
+			this->CalculateF();
+			this->F.Scale(-1);
+			this->CalculateJ();
+			PrepareMultigridJacobians();
+
+			this->U.SetAll(0);
+
+			int vItr = 0;
+			while (true)
+			{
+				if (verbosity > 1)
+					std::cout << "VCycle: " << vItr;
+				this->ComputeResidualIntoO();
+				double norm = this->O.Norm();
+				if (verbosity > 1)
+					std::cout << ", r: " << norm << std::endl;
+				if (norm < maxNorm)
+					break;
+				VCycle(maxNorm, maxGSItr, 2, 2);
+				vItr++;
+				if (vItr > maxVCycles)
+					break;
+			}
+			if (vItr > 0 && verbosity > 0)
+				std::cout << ", requiring " << vItr << " V Cycles";
+			double correctionNorm = this->U.Norm();
+			if (verbosity > 0)
+				std::cout << ", norm: " << correctionNorm << std::endl;
+			if (correctionNorm < maxNorm)
+				break;
+			this->W.AddCorrectionToHaloedData(this->U, 1, minValue, maxValue);
+			itr++;
+		}
+	}
+	void PrepareMultigridJacobians()
+	{
+		this->CalculateJ();
+		MultigridOps::Restrict<e>(this->R, child.R);
+		MultigridOps::Restrict<e>(this->B, child.B);
+		MultigridOps::Restrict<e>(this->W, child.W);
+		child.PrepareMultigridJacobians();
+	}
+	void VCycle(double maxGSNorm, int maxGSItr, int gsItrDown, int gsItrUp)
+	{
+		this->ComputeResidualIntoO();
+		double currNorm = this->O.Norm();
+		for (int i = 0; i < gsItrDown; i++)
+		{
+			this->GaussSeidelIteration();
+		}
+		this->ComputeResidualIntoO();
+		currNorm = this->O.Norm();
+		MultigridOps::Restrict<e>(this->O, child.F);
+		//MatrixOps::Visualize(this->O, MY_PATH, "Residual_" + std::to_string(e));
+		//MatrixOps::Visualize(child.F, MY_PATH, "Residual_Restricted_" + std::to_string(e));
+		child.U.SetAll(0);
+		child.VCycle(maxGSNorm, maxGSItr, gsItrDown, gsItrUp);
+		MultigridOps::Interpolate<e>(this->O, child.U);
+		//MatrixOps::Visualize(this->O, MY_PATH, "Correction_" + std::to_string(e));
+		//MatrixOps::Visualize(child.U, MY_PATH, "Correction_ToInterpolate_" + std::to_string(e));
+		this->U.Add(this->O, 1.0);
+
+		this->ComputeResidualIntoO();
+		currNorm = this->O.Norm();
+		for(int i = 0; i < gsItrUp; i++)
+		{
+			this->GaussSeidelIteration();
+		}
+
+		this->ComputeResidualIntoO();
+		currNorm = this->O.Norm();
+	}
+#endif
+
+#ifdef RECURSIVE_STRUCTURE_REQUIRED
 private:
 	SolverData<e - 1> child;
+#endif
+
 };
 
+#ifdef RECURSIVE_STRUCTURE_REQUIRED
+
 template <>
-class SolverData<2> : public SolverDataBase<2>
+class SolverData<4> : public SolverDataBase<4>
 {
 public:
 	SolverData(double gravity, double drag, double spacing) :
-		SolverDataBase<2>(gravity, drag, spacing)	
+		SolverDataBase<4>(gravity, drag, spacing)	
 	{
+
 	}
+#ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
 	void SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity)
 	{
-		std::cout << "Solving on Mesh level " << 2 << std::endl;
+		std::cout << "Solving on Mesh level " << 4 << std::endl;
 		this->SolveWithGaussSeidel(maxNorm, minValue, maxValue, maxItr, verbosity);
 	}
+#endif
+
+#ifdef USE_PRESMOOTHED_MULTIGRID
+	void SolveWithMultigrid(double maxNorm, double minValue, double maxValue, int maxVCycles, int maxGSItr, int verbosity)
+	{
+		std::cout << "Solving on Mesh level " << 4 << std::endl;
+		this->SolveWithGaussSeidel(maxNorm, minValue, maxValue, maxGSItr, verbosity);
+	}
+	void PrepareMultigridJacobians()
+	{
+		this->CalculateJ();
+	}
+	void VCycle(double maxGSNorm, int maxGSItr, int gsItrDown, int gsItrUp)
+	{
+		int gsItr = 0;
+		for (int i = 0; i < gsItrDown + gsItrUp; i++)
+		{
+			ComputeResidualIntoO();
+			double norm = O.Norm();
+			if (norm < maxGSNorm)
+				break;
+			GaussSeidelIteration();
+			gsItr++;
+			if (gsItr > maxGSItr)
+				break;
+		}
+	}
+#endif
 };
+#endif
