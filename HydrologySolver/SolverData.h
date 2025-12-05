@@ -19,8 +19,8 @@ template <int e>
 class SolverDataBase
 {
 public:
-	SolverDataBase(double gravity, double drag, double spacing) :
-		g(gravity), l(drag), s(spacing), fc(0.5 * gravity / drag), s2(spacing* spacing),
+	SolverDataBase(double gravity, double drag, double sideLength) :
+		g(gravity), l(drag), s(sideLength / wI), fc(0.5 * gravity / drag), s2(s*s),
 		B(DataPointer<wO, hO>::AllocateNewPointer()),
 		W(DataPointer<wO, hO>::AllocateNewPointer()),
 		R(DataPointer<wO, hO>::AllocateNewPointer()),
@@ -37,7 +37,7 @@ public:
 		JS(FiveStencilCSRMatrix<wI, hI>::AllocateNewPointer())
 #endif
 	{
-
+		std::cout << e << ": " << s << std::endl;
 	}
 
 //-----------------------------------------------------------------------------
@@ -581,11 +581,11 @@ template <int e>
 class SolverData : public SolverDataBase<e>
 {
 public:
-	SolverData(double gravity, double drag, double spacing) :
-		SolverDataBase<e>(gravity, drag, spacing)
+	SolverData(double gravity, double drag, double sideLength) :
+		SolverDataBase<e>(gravity, drag, sideLength)
 #ifdef RECURSIVE_STRUCTURE_REQUIRED
 		,
-		child(gravity, drag, spacing * 2)
+		child(gravity, drag, sideLength)
 #endif
 	{
 
@@ -643,9 +643,9 @@ public:
 					std::cout << ", r: " << norm << std::endl;
 				if (norm < maxNorm)
 					break;
-				VCycle(maxNorm, maxGSItr, 2, 2);
+				VCycle(maxNorm, maxGSItr, 4, 4);
 				vItr++;
-				if (vItr > maxVCycles)
+				if (vItr >= maxVCycles)
 					break;
 			}
 			if (vItr > 0 && verbosity > 0)
@@ -712,8 +712,8 @@ template <>
 class SolverData<4> : public SolverDataBase<4>
 {
 public:
-	SolverData(double gravity, double drag, double spacing) :
-		SolverDataBase<4>(gravity, drag, spacing)	
+	SolverData(double gravity, double drag, double sideLength) :
+		SolverDataBase<4>(gravity, drag, sideLength)	
 	{
 
 	}

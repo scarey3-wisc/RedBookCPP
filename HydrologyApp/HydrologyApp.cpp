@@ -111,7 +111,8 @@ int main(int argc, char** argv)
     std::filesystem::path outPath = topDir;
     MY_PATH = outPath;
 	MY_PATH.append("output");
-    SolverData<dim> myData(9.8, 0.1, 400.0 / ((1 >> dim) + 1.0));
+
+    SolverData<dim> myData(9.8, 0.1, 40 * 1023);
 
     for (int j = 0; j < myData.hO; j++)
     {
