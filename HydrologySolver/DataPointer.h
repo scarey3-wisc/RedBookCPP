@@ -58,6 +58,21 @@ public:
 
 //-----------------------------------------------------------------------------
 
+	double L1()
+	{
+		double result = 0;
+		for (int j = 0; j < h; j++)
+		{
+			for (int i = 0; i < w; i++)
+			{
+				result += Get(i, j);
+			}
+		}
+		return result;
+	}
+
+//-----------------------------------------------------------------------------
+
 	void SetAll(double value)
 	{
 		std::fill(ptr, ptr + w * h, value);
@@ -85,6 +100,32 @@ public:
 			for (int i = 0; i < w; i++)
 			{
 				Set(i, j, Get(i, j) + scale * b.Get(i, j));
+			}
+		}
+	}
+
+//-----------------------------------------------------------------------------
+
+	void AddAbs(DataPointer& b, double scale)
+	{
+		for (int j = 0; j < h; j++)
+		{
+			for (int i = 0; i < w; i++)
+			{
+				Set(i, j, Get(i, j) + scale * abs(b.Get(i, j)));
+			}
+		}
+	}
+
+//-----------------------------------------------------------------------------
+
+	void Add(double del)
+	{
+		for (int j = 0; j < h; j++)
+		{
+			for (int i = 0; i < w; i++)
+			{
+				Set(i, j, Get(i, j) + del);
 			}
 		}
 	}

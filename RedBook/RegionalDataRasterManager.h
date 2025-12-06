@@ -4,7 +4,7 @@
 #include "DataRasterManager.h"
 #include <array>
 
-inline static constexpr int REGIONAL_DATA_DIM = 256;
+inline static constexpr int REGIONAL_DATA_DIM = 257;
 inline static constexpr int REGIONAL_MAP_NUM_LODS = 5; //1, 2, 4, 8, 16; remember, a LOD is "how many 256 pixel heightmaps fill the regional map?
 
 
@@ -121,6 +121,11 @@ public:
 			managers.emplace_back(std::make_unique<RegionalDataRasterManager<DataType, w, h, Policy>>(cacheSizes[i], myWorld, pool));
 		}
 	}
+
+	// Disable copying:
+	MultiLODRegionalDataRasterManager(const MultiLODRegionalDataRasterManager&) = delete;
+	MultiLODRegionalDataRasterManager& operator=(const MultiLODRegionalDataRasterManager&) = delete;
+
 	RegionalDataHandle<DataType, w, h, Policy> GetRaster(const RegionalDataLoc& id)
 	{
 		RegionalDataLoc lower = id;
@@ -130,6 +135,16 @@ public:
 			managers[i - 1]->RefreshRaster(lower);
 		}
 		return managers[id.LOD - 1]->GetRaster(id);
+	}
+	RegionalDataHandle<DataType, w, h, Policy> DemandRaster(const RegionalDataLoc& id)
+	{
+		RegionalDataLoc lower = id;
+		for (int i = id.LOD - 1; i >= 1; i--)
+		{
+			lower = lower.GetLowerLOD();
+			managers[i - 1]->RefreshRaster(lower);
+		}
+		return managers[id.LOD - 1]->DemandRaster(id);
 	}
 	bool DataAvailable(const RegionalDataLoc& id)
 	{

@@ -1,7 +1,7 @@
 // HydrologyApp.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#include "..\HydrologySolver\Globals.h"
+#include "..\HydrologySolver\FileGlobals.h"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -101,7 +101,7 @@ Visualize(std::filesystem::path outPath, SolverData<e>& data, int mode)
 
 }
 
-static constexpr int dim = 10;
+static constexpr int dim = 8;
 
 int main(int argc, char** argv)
 {
@@ -112,7 +112,7 @@ int main(int argc, char** argv)
     MY_PATH = outPath;
 	MY_PATH.append("output");
 
-    SolverData<dim> myData(9.8, 0.1, 40 * 1023);
+    SolverData<dim> myData(9.8, 0.7, 40 * 1023);
 
     for (int j = 0; j < myData.hO; j++)
     {
@@ -145,21 +145,26 @@ int main(int argc, char** argv)
     }
     outPath.append("test.ppm");
 
-#ifdef USE_PARDISO
+#ifdef USE_PRESMOOTHED_PARDISO
+    std::cout << "SOLVING GRID SIZE " << myData.hI << " WITH SMOOTHED PARDISO" << std::endl;
+    myData.SolveWithPreSmoothedPARDISO(1e-10, 0.0, 10000.0, 1);
+#else
+#ifdef USE_PURE_PARDISO
 	std::cout << "SOLVING GRID SIZE " << myData.hI << " WITH PARDISO" << std::endl;
-    myData.SolveWithPARDISO(1e-10, 0, 10000.0, 1);
+    myData.SolveWithPARDISO(1e-10, 0.0, 10000.0, 1);
 #else
 #ifdef USE_PRESMOOTHED_MULTIGRID
     std::cout << "SOLVING GRID SIZE " << myData.hI << " WITH PRE-SMOOTHED MULTIGRID" << std::endl;
-    myData.SolveWithMultigrid(1e-10, 0, 10000.0, 2, 2000, 1);
+    myData.SolveWithMultigrid(1e-10, 0.0, 10000.0, 1, 8, 1);
 #else
 #ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
     std::cout << "SOLVING GRID SIZE " << myData.hI << " WITH PRE-SMOOTHED GAUSS SEIDEL" << std::endl;
-    myData.SolveWithPseudoMultigrid(1e-10, 0, 10000, 2000, 1);
+    myData.SolveWithPseudoMultigrid(1e-10, 0.0, 10000.0, 2000, 1);
 #else
 #ifdef USE_PURE_GAUSS_SEIDEL
     std::cout << "SOLVING GRID SIZE " << myData.hI << " WITH PURE GAUSS SEIDEL" << std::endl;
-    myData.SolveWithGaussSeidel(1e-10, 0, 10000.0, 2000, 1);
+    myData.SolveWithGaussSeidel(1e-10, 0.0, 10000.0, 2000, 1);
+#endif
 #endif
 #endif
 #endif

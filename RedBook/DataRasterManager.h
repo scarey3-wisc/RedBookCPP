@@ -182,7 +182,7 @@ private:
 // 	   METHODS NEEDED FOR PUBLIC HANDLE CLASS
 //------------------------------------------------------------------------------
 
-	SlotPtr GetSlotForID(const ID& id)
+	SlotPtr GetSlotForID(const ID& id, bool demandImmediate)
 	{
 		std::unique_lock<std::mutex> lock(manager_mutex);
 		auto it = idLookup.find(id);
@@ -254,13 +254,17 @@ private:
 			return slotToUse;
 		};
 
-		if (threads != nullptr && Policy::ThreadForAllocation())
+		if (threads != nullptr && Policy::ThreadForAllocation() && !demandImmediate)
 		{
 			threads->RequestTask(id, allocationDecision);
 			return nullptr;
 		}
 		else
+		{
+			lock.unlock();
 			return allocationDecision();
+		}
+			
 	}
 
 	//------------------------------------------------------------------------------
@@ -279,7 +283,7 @@ public:
 		DataRasterHandle& operator=(const DataRasterHandle& other) = default;
 		void Refresh()
 		{
-			LimitedDataRasterHandle::UpdateSlot(source->GetSlotForID(LimitedDataRasterHandle::myID));
+			LimitedDataRasterHandle::UpdateSlot(source->GetSlotForID(LimitedDataRasterHandle::myID), false);
 		}
 
 	private:
@@ -306,12 +310,17 @@ public:
 
 	void RefreshRaster(const ID& id)
 	{
-		GetSlotForID(id);
+		GetSlotForID(id, false);
 	}
 
 	DataRasterHandle GetRaster(const ID& id)
 	{
-		return DataRasterHandle(GetSlotForID(id), id, this);
+		return DataRasterHandle(GetSlotForID(id, false), id, this);
+	}
+
+	DataRasterHandle DemandRaster(const ID& id)
+	{
+		return DataRasterHandle(GetSlotForID(id, true), id, this);
 	}
 
 	int GetMaxCapacity() const { return fullCapacity; }

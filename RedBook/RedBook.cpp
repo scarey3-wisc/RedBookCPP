@@ -18,6 +18,9 @@
 #include <chrono>
 #include <omp.h>
 #include "GlobalRand.h"
+#include "..\HydrologySolver\FileGlobals.h"
+
+#include "FluidSolver.h"
 
 using namespace std;
 using namespace RedBook;
@@ -409,6 +412,11 @@ RedBookInitWorld()
     cout << "Tectonic Uplift Algo: River Reset" << endl;
     ContinentGenAlgorithms::RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 500, 0.0002);
     cout << endl;
+
+    RegionalMap* center = myWorldMap->GetRegion(0, 0);
+    RegionalDataLoc top = RegionalDataLoc(center->GetWorldX(), center->GetWorldY(), 8, 8, 5);
+    FluidSolver solveSomeFluid(top.LOD);
+    solveSomeFluid.FullSolutionCycle(top, myWorldMap->heightmaps);
 }
 
 
@@ -424,6 +432,15 @@ int WINAPI WinMain(
     LPSTR lpCmdLine, 
     int nCmdShow)
 {
+
+    wchar_t buffer[MAX_PATH];
+    DWORD size = GetModuleFileNameW(NULL, buffer, MAX_PATH);
+    std::filesystem::path exePath = std::filesystem::path(buffer, buffer + size);
+    std::filesystem::path exeDir = exePath.parent_path();
+    std::filesystem::path topDir = exeDir.parent_path().parent_path().parent_path();
+    std::filesystem::path outPath = topDir;
+    MY_PATH = outPath;
+    MY_PATH.append("output");
 
 	omp_set_num_threads(omp_get_max_threads() * 2 / 3);
     AllocConsole();

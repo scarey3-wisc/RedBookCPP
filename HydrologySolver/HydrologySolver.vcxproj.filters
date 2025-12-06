@@ -39,11 +39,16 @@
     <ClInclude Include="MultigridOps.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Globals.h">
+    <ClInclude Include="FileGlobals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="OperationModes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="FileGlobals.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

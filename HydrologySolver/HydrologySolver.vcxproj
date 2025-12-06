@@ -141,7 +141,7 @@
   <ItemGroup>
     <ClInclude Include="CSRMatrix.h" />
     <ClInclude Include="DataPointer.h" />
-    <ClInclude Include="Globals.h" />
+    <ClInclude Include="FileGlobals.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="MatrixOps.h" />
     <ClInclude Include="MultigridMesh.h" />
@@ -149,6 +149,9 @@
     <ClInclude Include="OperationModes.h" />
     <ClInclude Include="SolverDataOld.h" />
     <ClInclude Include="SolverData.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="FileGlobals.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

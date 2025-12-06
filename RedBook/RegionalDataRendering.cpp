@@ -28,8 +28,8 @@ uniform vec2 aOffset;   // Instance position
 uniform mat4 uViewProj; // Your orthographic projection
 uniform mat4 scale;
 
-uniform int uDim; // Dimension of heightmap (e.g., 256)
-uniform int uTexDim; // Dimension of the texture (e.g., 258 for 256 + 2 border)
+uniform int uDim; // Dimension of heightmap (e.g., 257)
+uniform int uTexDim; // Dimension of the texture (e.g., 259 for 257 + 2 border)
 
 out vec2 fragLocalPos;  // Pass to fragment shader
 
@@ -229,7 +229,7 @@ RegionalDataRendering::RenderHillshade(glm::vec2 location, float width, float he
     glUniform1f(loc, metersPerPixel);
 
     loc = glGetUniformLocation(hillshadeProgram, "uDim");
-	glUniform1i(loc, REGIONAL_DATA_DIM);
+	glUniform1i(loc, REGIONAL_DATA_DIM - 1);
 
     loc = glGetUniformLocation(hillshadeProgram, "uTexDim");
 	glUniform1i(loc, REGIONAL_DATA_DIM + 2);
@@ -297,7 +297,7 @@ RegionalDataRendering::RenderBandedHeight(glm::vec2 location, float width, float
     glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scale));
 
     loc = glGetUniformLocation(bandedHeightProgram, "uDim");
-    glUniform1i(loc, REGIONAL_DATA_DIM);
+    glUniform1i(loc, REGIONAL_DATA_DIM - 1);
 
     loc = glGetUniformLocation(bandedHeightProgram, "uTexDim");
     glUniform1i(loc, REGIONAL_DATA_DIM + 2);

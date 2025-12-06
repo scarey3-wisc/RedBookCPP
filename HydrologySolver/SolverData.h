@@ -13,14 +13,14 @@
 #include <iostream>
 #include <omp.h>
 #include <limits>
-#include "Globals.h"
+#include "FileGlobals.h"
 
 template <int e>
 class SolverDataBase
 {
 public:
 	SolverDataBase(double gravity, double drag, double sideLength) :
-		g(gravity), l(drag), s(sideLength / wI), fc(0.5 * gravity / drag), s2(s*s),
+		g(gravity), l(drag), s(sideLength / wI), fc(gravity / drag), s2(s*s),
 		B(DataPointer<wO, hO>::AllocateNewPointer()),
 		W(DataPointer<wO, hO>::AllocateNewPointer()),
 		R(DataPointer<wO, hO>::AllocateNewPointer()),
@@ -74,13 +74,6 @@ public:
 	static constexpr int wI = (1 << e) - 1;
 	static constexpr int hI = (1 << e) - 1;
 
-	const double g; // gravitational constant
-	const double l; // drag constant
-	const double s; // spacing constant
-
-	const double fc; // the quantity g/2l, an important flux constant
-	const double s2; // spacing squared is often an important quantity
-
 //-----------------------------------------------------------------------------
 
 	inline double GetW(int x, int y)
@@ -110,6 +103,21 @@ public:
 	inline void SetR(int x, int y, double value)
 	{
 		R.Set(x, y, value);
+	}
+	inline void SetSpacing(double domainSideLength)
+	{
+		s = domainSideLength / wI;
+		s2 = s * s;
+	}
+	inline void SetGravity(double gravity)
+	{
+		g = gravity;
+		fc = g / l;
+	}
+	inline void SetDrag(double drag)
+	{
+		l = drag;
+		fc = g / l;
 	}
 
 //-----------------------------------------------------------------------------
@@ -181,6 +189,9 @@ public:
 
 //-----------------------------------------------------------------------------
 
+#ifdef USE_PRESMOOTHED_PARDISO
+	virtual void SolveWithPreSmoothedPARDISO(double maxNorm, double minValue, double maxValue, int verbosity) = 0;
+#endif
 
 #ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
 	virtual void SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity) = 0;
@@ -204,8 +215,8 @@ public:
 			if (verbosity > 0)
 				std::cout << "Newton Itr " << itr;
 			CalculateF();
-			F.Scale(-1);
 			CalculateJ();
+			F.Scale(-1);
 			
 			U.SetAll(0);
 			int gsItr = 0;
@@ -248,9 +259,10 @@ public:
 			if (verbosity > 0)
 				std::cout << "Newton Itr " << itr;
 			CalculateF();
-			F.Scale(-1);
 			CalculateJ();
+			J_cc.AddAbs(F, -2.0);
 			JS.LoadValues(J_cc, J_xp, J_xm, J_yp, J_ym);
+			F.Scale(-1);
 
 			U.SetAll(0);
 			SolveSparseSystemWithPARDISO(
@@ -261,12 +273,12 @@ public:
 				U.GetRawPtr(), 
 				F.GetRawPtr(), 
 				false);
-			double correctionNorm = U.Norm();
-			if (verbosity > 0)
-				std::cout << ", norm: " << correctionNorm << std::endl;
-			if (correctionNorm < maxNorm)
-				break;
+			double newtonNorm = U.Norm();
 			W.AddCorrectionToHaloedData(U, 1, minValue, maxValue);
+			if (verbosity > 0)
+				std::cout << ", norm: " << newtonNorm << std::endl;
+			if (newtonNorm < maxNorm)
+				break;
 			itr++;
 		}
 	}
@@ -510,6 +522,15 @@ private:
 	}
 
 //-----------------------------------------------------------------------------
+
+	double g; // gravitational constant
+	double l; // drag constant
+	double s; // spacing constant
+
+	double fc; // the quantity g/2l, an important flux constant
+	double s2; // spacing squared is often an important quantity
+	
+//-----------------------------------------------------------------------------
 	
 	// Returns a positive value if flux is flowing from (ax, ay) to (bx, by)
 	double Flux(int ax, int ay, int bx, int by)
@@ -591,14 +612,33 @@ public:
 
 	}
 
+#ifdef USE_PRESMOOTHED_PARDISO
+	void SolveWithPreSmoothedPARDISO(double maxNorm, double minValue, double maxValue, int verbosity)
+	{
+		MultigridOps::Restrict<e>(this->R, child.R);
+		MultigridOps::Restrict<e>(this->B, child.B);
+		MultigridOps::Restrict<e>(this->W, child.W);
+		child.SolveWithPreSmoothedPARDISO(maxNorm, minValue, maxValue, verbosity);
+		MultigridOps::Interpolate<e>(this->W, child.W);
+		this->CalculateJ();
+		this->CalculateF();
+		this->GaussSeidelIterationPostInterpolation();
+
+		std::cout << "Solving on Mesh level " << e << std::endl;
+		this->SolveWithPARDISO(maxNorm, minValue, maxValue, verbosity);
+	}
+#endif
+
 #ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
 	void SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity)
 	{
-		MultigridOps::RestrictSimple<e>(this->R, child.R);
-		MultigridOps::RestrictSimple<e>(this->B, child.B);
-		MultigridOps::RestrictSimple<e>(this->W, child.W);
+		MultigridOps::Restrict<e>(this->R, child.R);
+		MultigridOps::Restrict<e>(this->B, child.B);
+		MultigridOps::Restrict<e>(this->W, child.W);
 		child.SolveWithPseudoMultigrid(maxNorm, minValue, maxValue, maxItr, verbosity);
 		MultigridOps::Interpolate<e>(this->W, child.W);
+		this->CalculateJ();
+		this->CalculateF();
 		this->GaussSeidelIterationPostInterpolation();
 
 		std::cout << "Solving on Mesh level " << e << std::endl;
@@ -611,11 +651,13 @@ public:
 #ifdef USE_PRESMOOTHED_MULTIGRID
 	void SolveWithMultigrid(double maxNorm, double minValue, double maxValue, int maxVCycles, int maxGSItr, int verbosity)
 	{
-		MultigridOps::RestrictSimple<e>(this->R, child.R);
-		MultigridOps::RestrictSimple<e>(this->B, child.B);
-		MultigridOps::RestrictSimple<e>(this->W, child.W);
+		MultigridOps::Restrict<e>(this->R, child.R);
+		MultigridOps::Restrict<e>(this->B, child.B);
+		MultigridOps::Restrict<e>(this->W, child.W);
 		child.SolveWithMultigrid(maxNorm, minValue, maxValue, maxVCycles, maxGSItr, verbosity);
 		MultigridOps::Interpolate<e>(this->W, child.W);
+		this->CalculateJ();
+		this->CalculateF();
 		this->GaussSeidelIterationPostInterpolation();
 
 		std::cout << "Solving on Mesh level " << e << std::endl;
@@ -625,10 +667,10 @@ public:
 		{
 			if (verbosity > 0)
 				std::cout << "Newton Itr " << itr;
+			
+			PrepareMultigridJacobians();
 			this->CalculateF();
 			this->F.Scale(-1);
-			this->CalculateJ();
-			PrepareMultigridJacobians();
 
 			this->U.SetAll(0);
 
@@ -678,13 +720,9 @@ public:
 		this->ComputeResidualIntoO();
 		currNorm = this->O.Norm();
 		MultigridOps::Restrict<e>(this->O, child.F);
-		//MatrixOps::Visualize(this->O, MY_PATH, "Residual_" + std::to_string(e));
-		//MatrixOps::Visualize(child.F, MY_PATH, "Residual_Restricted_" + std::to_string(e));
 		child.U.SetAll(0);
 		child.VCycle(maxGSNorm, maxGSItr, gsItrDown, gsItrUp);
 		MultigridOps::Interpolate<e>(this->O, child.U);
-		//MatrixOps::Visualize(this->O, MY_PATH, "Correction_" + std::to_string(e));
-		//MatrixOps::Visualize(child.U, MY_PATH, "Correction_ToInterpolate_" + std::to_string(e));
 		this->U.Add(this->O, 1.0);
 
 		this->ComputeResidualIntoO();
@@ -717,6 +755,15 @@ public:
 	{
 
 	}
+
+#ifdef USE_PRESMOOTHED_PARDISO
+	void SolveWithPreSmoothedPARDISO(double maxNorm, double minValue, double maxValue, int verbosity)
+	{
+		std::cout << "Solving on Mesh level " << 4 << std::endl;
+		this->SolveWithPARDISO(maxNorm, minValue, maxValue, verbosity);
+	}
+#endif
+
 #ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
 	void SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity)
 	{
@@ -738,7 +785,7 @@ public:
 	void VCycle(double maxGSNorm, int maxGSItr, int gsItrDown, int gsItrUp)
 	{
 		int gsItr = 0;
-		for (int i = 0; i < gsItrDown + gsItrUp; i++)
+		for (int i = 0; i < maxGSItr; i++)
 		{
 			ComputeResidualIntoO();
 			double norm = O.Norm();

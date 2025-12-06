@@ -49,7 +49,7 @@ Heightmap::OnAllocation(HeightmapBase handle, WorldMap* world)
 	double wcWidth = 1.0 * RegionalMap::DIMENSION / handle.myID.GetNumSectionsPerSide();
 	double baseWorldX = handle.myID.regionX * RegionalMap::DIMENSION + wcWidth * handle.myID.x;
 	double baseWorldY = handle.myID.regionY * RegionalMap::DIMENSION + wcWidth * handle.myID.y;
-	double pixelWidth = wcWidth / DIM;
+	double pixelWidth = wcWidth / (DIM - 1);
 
 	if(USE_OPENMP_FOR_ALLOCATION)
 	{

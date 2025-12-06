@@ -30,8 +30,15 @@ class HeightmapManager : public MultiLODRegionalSkirtedCellDataRasterManager<int
 public:
 	HeightmapManager (const std::array<int, REGIONAL_MAP_NUM_LODS>& cacheSizes, WorldMap* myWorld, RegionalDataRequestStack* pool) : 
 		MultiLODRegionalDataRasterManager(cacheSizes, myWorld, pool) {}
+	
+	//The difference between get and demand is that Get will return an unusable heightmap
+	//if a usable one isn't ready; demand will block until a usable one is ready.
 	Heightmap GetRaster(const RegionalDataLoc& id)
 	{
 		return Heightmap(MultiLODRegionalDataRasterManager::GetRaster(id));
+	}
+	Heightmap DemandRaster(const RegionalDataLoc& id)
+	{
+		return Heightmap(MultiLODRegionalDataRasterManager::DemandRaster(id));
 	}
 };

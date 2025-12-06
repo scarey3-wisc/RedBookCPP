@@ -3,4 +3,4 @@
 #include <fstream>
 #include <filesystem>
 
-std::filesystem::path MY_PATH;
+extern std::filesystem::path MY_PATH;
