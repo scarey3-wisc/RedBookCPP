@@ -34,10 +34,11 @@ public:
 		J_ym(DataPointer<wI, hI>::AllocateNewPointer())
 #ifdef USE_PARDISO
 		,
-		JS(FiveStencilCSRMatrix<wI, hI>::AllocateNewPointer())
+		JS(FiveStencilCSRMatrix<wI, hI>::AllocateNewPointer()),
+		pardisoInit(false)
 #endif
 	{
-		std::cout << e << ": " << s << std::endl;
+
 	}
 
 //-----------------------------------------------------------------------------
@@ -217,6 +218,12 @@ public:
 			CalculateF();
 			CalculateJ();
 			F.Scale(-1);
+
+			double residualNorm = F.Norm();
+			if (verbosity > 0)
+				std::cout << ", residual norm: " << residualNorm;
+			if (residualNorm < maxNorm)
+				break;
 			
 			U.SetAll(0);
 			int gsItr = 0;
@@ -237,12 +244,7 @@ public:
 			}
 
 			if (gsItr > 0 && verbosity > 0)
-				std::cout << ", requiring " << gsItr << " GS iterations";
-			double correctionNorm = U.Norm();
-			if (verbosity > 0)
-				std::cout << ", norm: " << correctionNorm << std::endl;
-			if (correctionNorm < maxNorm)
-				break;
+				std::cout << ", requiring " << gsItr << " GS iterations" << std::endl;
 			W.AddCorrectionToHaloedData(U, 1, minValue, maxValue);
 			itr++;
 		}
@@ -264,6 +266,12 @@ public:
 			JS.LoadValues(J_cc, J_xp, J_xm, J_yp, J_ym);
 			F.Scale(-1);
 
+			double residualNorm = F.Norm();
+			if (verbosity > 0)
+				std::cout << ", residual norm: " << residualNorm << std::endl;
+			if (residualNorm < maxNorm)
+				break;
+
 			U.SetAll(0);
 			SolveSparseSystemWithPARDISO(
 				JS.matrixSize, 
@@ -273,14 +281,10 @@ public:
 				U.GetRawPtr(), 
 				F.GetRawPtr(), 
 				false);
-			double newtonNorm = U.Norm();
 			W.AddCorrectionToHaloedData(U, 1, minValue, maxValue);
-			if (verbosity > 0)
-				std::cout << ", norm: " << newtonNorm << std::endl;
-			if (newtonNorm < maxNorm)
-				break;
 			itr++;
 		}
+		TerminatePARDISOStructures(JS.matrixSize, JS.GetRowOffsetsPtr(), JS.GetColumnIndicesPtr(), false);
 	}
 #endif	
 
@@ -320,28 +324,27 @@ public:
 
 private:
 
+#ifdef USE_PARDISO
+
 //-----------------------------------------------------------------------------
 
-#ifdef USE_PARDISO
-	void SolveSparseSystemWithPARDISO(int matrixSize, double* vals, int* rowOffsets, int* colIndices, double* x, double* f, bool verbose)
+	void OnFirstPARDISOSolveAttempt(int matrixSize, double* vals, int* rowOffsets, int* colIndices, bool verbose)
 	{
 
-
-		//std::vector<int> perm(262144);
-		//for (int i = 0; i < 262144; i++)
-		//    perm[i] = i;
-
 		MKL_INT n = matrixSize; // Matrix size
-		MKL_INT mtype = 11;        // Real and structurally symmetric matrix
+		MKL_INT mtype = 1;        // Real and structurally symmetric matrix
 		MKL_INT nrhs = 1;         // Number of right hand sides
-		void* pt[64];             // Internal solver memory pointer pt
 		// should be "int" when using 32-bit architectures, or "long int"
 		// for 64-bit architectures. void* should be OK in both cases
-		MKL_INT iparm[64];        // Pardiso control parameters
 		MKL_INT maxfct, mnum, phase, error, msglvl;
 		MKL_INT i;
 		float ddum;               // Scalar dummy (PARDISO needs it)
 		MKL_INT idum;             // Integer dummy (PARDISO needs it)
+
+		maxfct = 1;           // Maximum number of numerical factorizations.
+		mnum = 1;             // Which factorization to use.
+		msglvl = verbose ? 1 : 0;           // Print statistical information in file
+		error = 0;            // Initialize error flag
 
 		// Set-up PARDISO control parameters
 
@@ -369,26 +372,23 @@ private:
 		iparm[17] = -1;       // Output: Number of nonzeros in the factor LU
 		iparm[18] = -1;       // Output: Mflops for LU factorization
 		iparm[19] = 0;        // Output: Numbers of CG Iterations
+		iparm[20] = 1;		  // USe some pivoting to help with singularity
 		iparm[23] = 1;        // Two-level factorization*/
 		iparm[26] = 1;        // Check matrix for errors
 		iparm[27] = 0;        // Use double precision
 		iparm[34] = 1;        // Use zero-based indexing
-		maxfct = 1;           // Maximum number of numerical factorizations.
-		mnum = 1;             // Which factorization to use.
-		msglvl = verbose ? 1 : 0;           // Print statistical information in file
-		error = 0;            // Initialize error flag
 
 		// Initialize the internal solver memory pointer. This is only
 		// necessary for the FIRST call of the PARDISO solver
 		for (i = 0; i < 64; i++)
 		{
-			pt[i] = 0;
+			pardisoPT[i] = 0;
 		}
 
 		// Reordering and Symbolic Factorization. This step also allocates
 		// all memory that is necessary for the factorization
 		phase = 11;
-		PARDISO(pt, &maxfct, &mnum, &mtype, &phase, &n,
+		PARDISO(pardisoPT, &maxfct, &mnum, &mtype, &phase, &n,
 			vals, rowOffsets, colIndices,
 			&idum, &nrhs, iparm, &msglvl, &ddum, &ddum, &error);
 		if (error != 0)
@@ -401,10 +401,34 @@ private:
 			std::cout << "Number of factorization MFLOPS = " << iparm[18] << std::endl;
 		}
 
+		pardisoInit = true;
+	}
+
+//-----------------------------------------------------------------------------
+
+	void SolveSparseSystemWithPARDISO(int matrixSize, double* vals, int* rowOffsets, int* colIndices, double* x, double* f, bool verbose)
+	{
+		MKL_INT n = matrixSize; // Matrix size
+		MKL_INT mtype = 1;        // Real and structurally symmetric matrix
+		MKL_INT nrhs = 1;         // Number of right hand sides
+		// should be "int" when using 32-bit architectures, or "long int"
+		// for 64-bit architectures. void* should be OK in both cases
+		MKL_INT maxfct, mnum, phase, error, msglvl;
+		MKL_INT i;
+		float ddum;               // Scalar dummy (PARDISO needs it)
+		MKL_INT idum;             // Integer dummy (PARDISO needs it)
+
+		maxfct = 1;           // Maximum number of numerical factorizations.
+		mnum = 1;             // Which factorization to use.
+		msglvl = verbose ? 1 : 0;           // Print statistical information in file
+		error = 0;            // Initialize error flag
+
+		if (!pardisoInit)
+			OnFirstPARDISOSolveAttempt(matrixSize, vals, rowOffsets, colIndices, verbose);
 
 		// Numerical factorization
 		phase = 22;
-		PARDISO(pt, &maxfct, &mnum, &mtype, &phase, &n,
+		PARDISO(pardisoPT, &maxfct, &mnum, &mtype, &phase, &n,
 			vals, rowOffsets, colIndices,
 			&idum, &nrhs, iparm, &msglvl, &ddum, &ddum, &error);
 		if (error != 0)
@@ -419,7 +443,7 @@ private:
 		// Back substitution and iterative refinement
 		phase = 33;
 		iparm[7] = 0;         // Max numbers of iterative refinement steps
-		PARDISO(pt, &maxfct, &mnum, &mtype, &phase, &n,
+		PARDISO(pardisoPT, &maxfct, &mnum, &mtype, &phase, &n,
 			vals, rowOffsets, colIndices,
 			&idum, &nrhs, iparm, &msglvl, static_cast<void*>(f), x, &error);
 		if (error != 0)
@@ -429,14 +453,36 @@ private:
 		{
 			std::cout << "Solve completed ... " << std::endl;
 		}
+	}
 
+//-----------------------------------------------------------------------------
 
+	void TerminatePARDISOStructures(int matrixSize, int* rowOffsets, int* colIndices, bool verbose)
+	{
+
+		MKL_INT n = matrixSize; // Matrix size
+		MKL_INT mtype = 1;        // Real and structurally symmetric matrix
+		MKL_INT nrhs = 1;         // Number of right hand sides
+		// should be "int" when using 32-bit architectures, or "long int"
+		// for 64-bit architectures. void* should be OK in both cases
+		MKL_INT maxfct, mnum, phase, error, msglvl;
+		MKL_INT i;
+		float ddum;               // Scalar dummy (PARDISO needs it)
+		MKL_INT idum;             // Integer dummy (PARDISO needs it)
+
+		maxfct = 1;           // Maximum number of numerical factorizations.
+		mnum = 1;             // Which factorization to use.
+		msglvl = verbose ? 1 : 0;           // Print statistical information in file
+		error = 0;            // Initialize error flag
 		// Termination and release of memory.
 		phase = -1;           // Release internal memory
-		PARDISO(pt, &maxfct, &mnum, &mtype, &phase, &n,
+		PARDISO(pardisoPT, &maxfct, &mnum, &mtype, &phase, &n,
 			&ddum, rowOffsets, colIndices,
 			&idum, &nrhs, iparm, &msglvl, &ddum, &ddum, &error);
+
+		pardisoInit = false;
 	}
+
 #endif
 
 //-----------------------------------------------------------------------------
@@ -529,6 +575,12 @@ private:
 
 	double fc; // the quantity g/2l, an important flux constant
 	double s2; // spacing squared is often an important quantity
+
+#ifdef USE_PARDISO
+	void* pardisoPT[64];	// Internal solver memory pointer pt for PARDISO
+	MKL_INT iparm[64];        // Pardiso control parameters
+	bool pardisoInit;
+#endif
 	
 //-----------------------------------------------------------------------------
 	
@@ -611,6 +663,23 @@ public:
 	{
 
 	}
+#ifdef RECURSIVE_STRUCTURE_REQUIRED
+	inline void SetSpacing(double domainSideLength)
+	{
+		SolverDataBase<e>::SetSpacing(domainSideLength);
+		child.SetSpacing(domainSideLength);
+	}
+	inline void SetGravity(double gravity)
+	{
+		SolverDataBase<e>::SetGravity(gravity);
+		child.SetGravity(gravity);
+	}
+	inline void SetDrag(double drag)
+	{
+		SolverDataBase<e>::SetDrag(drag);
+		child.SetDrag(drag);
+	}
+#endif
 
 #ifdef USE_PRESMOOTHED_PARDISO
 	void SolveWithPreSmoothedPARDISO(double maxNorm, double minValue, double maxValue, int verbosity)
@@ -672,6 +741,12 @@ public:
 			this->CalculateF();
 			this->F.Scale(-1);
 
+			double residualNorm = F.Norm();
+			if (verbosity > 0)
+				std::cout << ", residual norm: " << residualNorm;
+			if (residualNorm < maxNorm)
+				break;
+
 			this->U.SetAll(0);
 
 			int vItr = 0;
@@ -691,12 +766,7 @@ public:
 					break;
 			}
 			if (vItr > 0 && verbosity > 0)
-				std::cout << ", requiring " << vItr << " V Cycles";
-			double correctionNorm = this->U.Norm();
-			if (verbosity > 0)
-				std::cout << ", norm: " << correctionNorm << std::endl;
-			if (correctionNorm < maxNorm)
-				break;
+				std::cout << ", requiring " << vItr << " V Cycles" << std::endl;
 			this->W.AddCorrectionToHaloedData(this->U, 1, minValue, maxValue);
 			itr++;
 		}

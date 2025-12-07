@@ -46,39 +46,23 @@ Heightmap::OnAllocation(HeightmapBase handle, WorldMap* world)
 		return;
 	}
 	//width in world coordinates - probably between 1 and RegionalMap::DIMENSION, in powers of 2
-	double wcWidth = 1.0 * RegionalMap::DIMENSION / handle.myID.GetNumSectionsPerSide();
+	/*double wcWidth = 1.0 * RegionalMap::DIMENSION / handle.myID.GetNumSectionsPerSide();
 	double baseWorldX = handle.myID.regionX * RegionalMap::DIMENSION + wcWidth * handle.myID.x;
 	double baseWorldY = handle.myID.regionY * RegionalMap::DIMENSION + wcWidth * handle.myID.y;
-	double pixelWidth = wcWidth / (DIM - 1);
+	double pixelWidth = wcWidth / (DIM - 1);*/
 
-	if(USE_OPENMP_FOR_ALLOCATION)
+#pragma omp parallel for if(USE_OPENMP_FOR_ALLOCATION)
+	for (int index = 0; index < (DIM + 2) * (DIM + 2); index++)
 	{
-#pragma omp parallel for
-		for (int index = 0; index < (DIM + 2) * (DIM + 2); index++)
-		{
-			int i = index % (DIM + 2);
-			int j = index / (DIM + 2);
-			double wX = baseWorldX + (i - 1) * pixelWidth;
-			double wY = baseWorldY + (j - 1) * pixelWidth;
-			double elev = parent->CalculateElevation(wX, wY);
-			elev *= Shift;
-			int32_t stored = (int)elev;
-			handle.Set(stored, index);
-		}
-	}
-	else
-	{
-		for (int index = 0; index < (DIM + 2) * (DIM + 2); index++)
-		{
-			int i = index % (DIM + 2);
-			int j = index / (DIM + 2);
-			double wX = baseWorldX + (i - 1) * pixelWidth;
-			double wY = baseWorldY + (j - 1) * pixelWidth;
-			double elev = parent->CalculateElevation(wX, wY);
-			elev *= Shift;
-			int32_t stored = (int)elev;
-			handle.Set(stored, index);
-		}
+		int i = index % (DIM + 2);
+		int j = index / (DIM + 2);
+		double wX = 0;
+		double wY = 0;
+		handle.myID.GetWorldCoordinates(i, j, wX, wY);
+		double elev = parent->CalculateElevation(wX, wY);
+		elev *= Shift;
+		int32_t stored = (int)elev;
+		handle.Set(stored, index);
 	}
 
 }

@@ -8,6 +8,7 @@
 #include "VoronoiRendering.h"
 #include "RegionalDataRendering.h"
 #include "Heightmap.h"
+#include "Depthmap.h"
 
 
 class SamplePoint;
@@ -92,6 +93,7 @@ public:
 	double dX, dY;
 	int tileSize;
 	HeightmapManager heightmaps;
+	DepthmapManager depthmaps;
 
 	RegionalDataRequestStack myWorkerThread = RegionalDataRequestStack(1);
 

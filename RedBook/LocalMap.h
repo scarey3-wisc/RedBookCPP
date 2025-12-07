@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm.hpp>
+#include "TileSizes.h"
 
 class RegionalMap;
 
@@ -49,6 +50,6 @@ private:
 	RegionalMap* parent;
 	bool activityFlag;
 public:
-	inline static constexpr int METER_DIM = 10240;
+	inline static constexpr int METER_DIM = TileSizes::METERS_PER_LOCAL_MAP;
 };
 

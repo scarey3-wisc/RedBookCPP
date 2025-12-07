@@ -1924,7 +1924,8 @@ RegionalMap::GatherRelevantDataIDs(
 	float myX, float myY,
 	vector<RegionalDataCheck*>& dataChecks,
 	vector<glm::vec2>& dataLocs,
-	vector<RegionalDataLoc>& dataIDs
+	vector<RegionalDataLoc>& dataIDs,
+	bool launchAllocation
 )
 {
 	RegionalDataLoc top = RegionalDataLoc(GetWorldX(), GetWorldY(), 0, 0, 1);
@@ -1932,7 +1933,7 @@ RegionalMap::GatherRelevantDataIDs(
 
 	bool topAvailable = true;
 	for (RegionalDataCheck* checker : dataChecks)
-		if (!checker->DataAvailable(top))
+		if (!checker->DataAvailable(top, launchAllocation))
 			topAvailable = false;
 
 	if (!topAvailable)
@@ -1940,7 +1941,7 @@ RegionalMap::GatherRelevantDataIDs(
 
 	//the return here signals whether I'm providing data - either from myself or my children
 	auto inclusionDecision = [&dataLocs, &dataIDs, &dataChecks,
-	regionDim, screenWidth, screenHeight, myX, myY](auto self, RegionalDataLoc topic) -> void
+	regionDim, screenWidth, screenHeight, myX, myY, launchAllocation](auto self, RegionalDataLoc topic) -> void
 	{
 		//We're assuming that topic is onscreen and that it's data is available. We're deciding
 		//whether to use it or use its children instead.
@@ -1981,7 +1982,7 @@ RegionalMap::GatherRelevantDataIDs(
 			bool allAvailable = true;
 			for (RegionalDataLoc child : relevantChildren)
 				for (RegionalDataCheck* checker : dataChecks)
-					if (!checker->DataAvailable(child))
+					if (!checker->DataAvailable(child, launchAllocation))
 						allAvailable = false;
 			if (!allAvailable)
 			{
@@ -1992,7 +1993,7 @@ RegionalMap::GatherRelevantDataIDs(
 			{
 				bool available = true;
 				for (RegionalDataCheck* checker : dataChecks)
-					if (!checker->DataAvailable(child))
+					if (!checker->DataAvailable(child, launchAllocation))
 						available = false;
 				if(available)
 					self(self, child);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Heightmap.h"
+#include "Depthmap.h"
 #include <filesystem>
 
 template <int e>
@@ -14,10 +15,13 @@ public:
 	void LoadDefaultRainfallData();
 	void LoadDefaultDepthGuess();
 	void LoadHeightmap(RegionalDataLoc where, HeightmapManager& source);
+	void LoadDepthmap(RegionalDataLoc where, DepthmapManager& source, bool demand);
 	void VisualizeData();
 	void Solve();
-	void FullSolutionCycle(RegionalDataLoc where, HeightmapManager& source);
+	void FullSolutionCycle(RegionalDataLoc where, HeightmapManager& heights, DepthmapManager& depths);
+	void SaveDepthmap(RegionalDataLoc where, DepthmapManager& source);
 	void SmoothHeightmap(float smoothingFactor);
+	void RecursiveSolutionCycle(RegionalDataLoc where, HeightmapManager& heights, DepthmapManager& depths, int recursiveDepth);
 
 private:
 	void Visualize(std::filesystem::path outPath, std::string name, int mode);

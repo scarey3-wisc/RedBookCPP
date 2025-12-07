@@ -3,8 +3,9 @@
 #include "HashUtils.h"
 #include "DataRasterManager.h"
 #include <array>
+#include "TileSizes.h"
 
-inline static constexpr int REGIONAL_DATA_DIM = 257;
+inline static constexpr int REGIONAL_DATA_DIM = TileSizes::PIXELS_PER_REGIONAL_DATA_RASTER;
 inline static constexpr int REGIONAL_MAP_NUM_LODS = 5; //1, 2, 4, 8, 16; remember, a LOD is "how many 256 pixel heightmaps fill the regional map?
 
 
@@ -45,6 +46,15 @@ struct RegionalDataLoc
 	int GetNumSectionsPerSide() const
 	{
 		return 1 << (LOD - 1);
+	}
+	inline void GetWorldCoordinates(int i, int j, double& wX, double& wY)
+	{
+		double wcWidth = 1.0 * TileSizes::LOCAL_MAPS_PER_REGIONAL_MAP / GetNumSectionsPerSide();
+		double baseWorldX = regionX * TileSizes::LOCAL_MAPS_PER_REGIONAL_MAP + wcWidth * x;
+		double baseWorldY = regionY * TileSizes::LOCAL_MAPS_PER_REGIONAL_MAP + wcWidth * y;
+		double pixelWidth = wcWidth / (REGIONAL_DATA_DIM - 1);
+		wX = baseWorldX + (i - 1) * pixelWidth;
+		wY = baseWorldY + (j - 1) * pixelWidth;
 	}
 	RegionalDataLoc GetLowerLOD()
 	{
@@ -95,7 +105,7 @@ using RegionalDataRequestStack = RequestStack <RegionalDataLoc, RegionalDataLocH
 
 class RegionalDataCheck {
 public:
-	virtual bool DataAvailable(const RegionalDataLoc& id) = 0;
+	virtual bool DataAvailable(const RegionalDataLoc& id, bool launchRequest) = 0;
 
 	virtual ~RegionalDataCheck() = default; // always for polymorphic base classes
 };
@@ -146,10 +156,17 @@ public:
 		}
 		return managers[id.LOD - 1]->DemandRaster(id);
 	}
-	bool DataAvailable(const RegionalDataLoc& id)
+	bool DataAvailable(const RegionalDataLoc& id, bool launchRequest)
 	{
-		RegionalDataHandle<DataType, w, h, Policy> raster = GetRaster(id);
-		return raster.OkayToUse();
+		if (launchRequest)
+		{
+			RegionalDataHandle<DataType, w, h, Policy> raster = GetRaster(id);
+			return raster.OkayToUse();
+		}
+		else
+		{
+			return managers[id.LOD - 1]->RasterAvailable(id);
+		}
 	}
 
 	int GetMaxCapacity(int LOD) const { return managers[LOD - 1]->GetMaxCapacity(); }

@@ -17,15 +17,50 @@ FluidSolver::~FluidSolver()
     }
 }
 void 
-FluidSolver::FullSolutionCycle(RegionalDataLoc where, HeightmapManager& source)
+FluidSolver::FullSolutionCycle(RegionalDataLoc where, HeightmapManager& heights, DepthmapManager& depths)
 {
+    double meterDim = 1.0 * RegionalMap::METER_DIM;
+    meterDim /= (1.0 * (1 << (where.LOD - 1)));
+    data->SetSpacing(meterDim);
     LoadDefaultDepthGuess();
     LoadDefaultRainfallData();
-    LoadHeightmap(where, source);
+    LoadHeightmap(where, heights);
+    LoadDepthmap(where, depths, false);
     VisualizeData();
     Solve();
     VisualizeData();
+    SaveDepthmap(where, depths);
 }
+
+void
+FluidSolver::RecursiveSolutionCycle(RegionalDataLoc where, HeightmapManager& heights, DepthmapManager& depths, int recursiveDepth)
+{
+    int wX = (int)where.x;
+    int wY = (int)where.y;
+    int wD = (int)where.LOD;
+    std::cout << std::endl;
+    std::cout << "||**************************************||" << std::endl;
+    std::cout << "||****** SOLVING " << wX << ", " << wY << ", AT DEPTH " << wD << " ******|| " << std::endl;
+    std::cout << "||**************************************||" << std::endl << std::endl;
+
+    double meterDim = 1.0 * RegionalMap::METER_DIM;
+    meterDim /= (1.0 * (1 << (where.LOD - 1)));
+    data->SetSpacing(meterDim);
+    LoadDefaultDepthGuess();
+    LoadDefaultRainfallData();
+    LoadHeightmap(where, heights);
+    LoadDepthmap(where, depths, true);
+    Solve();
+    SaveDepthmap(where, depths);
+
+    if (recursiveDepth <= 1)
+        return;
+    for (RegionalDataLoc child : where.GetHigherLODs())
+    {
+        RecursiveSolutionCycle(child, heights, depths, recursiveDepth - 1);
+    }
+}
+
 
 void 
 FluidSolver::LoadDefaultRainfallData()
@@ -100,6 +135,42 @@ FluidSolver::SmoothHeightmap(float smoothingFactor)
         }
     }
 }
+
+void 
+FluidSolver::SaveDepthmap(RegionalDataLoc where, DepthmapManager& source)
+{
+    Depthmap target = source.DemandRaster(where);
+    for (int j = 0; j < data->hO; j++)
+    {
+        for (int i = 0; i < data->wO; i++)
+        {
+            double depth = data->GetW(i, j);
+            target.SetDepth(i + 1, j + 1, (float)depth);
+        }
+    }
+}
+
+void 
+FluidSolver::LoadDepthmap(RegionalDataLoc where, DepthmapManager& source, bool demand)
+{
+    double meterDim = 1.0 * RegionalMap::METER_DIM;
+    meterDim /= where.GetNumSectionsPerSide();
+    data->SetSpacing(meterDim);
+
+    if (!source.DataAvailable(where, false) && !demand)
+        return;
+
+    Depthmap target = source.DemandRaster(where);
+    for (int j = 0; j < data->hO; j++)
+    {
+        for (int i = 0; i < data->wO; i++)
+        {
+            float depth = target.GetDepth(i + 1, j + 1);
+            data->SetW(i, j, (double) depth);
+        }
+    }
+}
+
 void 
 FluidSolver::LoadHeightmap(RegionalDataLoc where, HeightmapManager& source)
 {
@@ -187,6 +258,9 @@ FluidSolver::Visualize(std::filesystem::path outPath, std::string name, int mode
                 w = std::pow(w, 0.5);
             else
                 w = 0;
+
+            if (data->GetW(x, y) >= 5.0)
+                w = 1;
 
             int wR = 0;
             int wG = 0;

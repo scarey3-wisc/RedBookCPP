@@ -15,7 +15,7 @@ using namespace std;
 WorldMap::WorldMap(const char* name, const std::array<int, REGIONAL_MAP_NUM_LODS>& cacheSizes) :
 	worldName(name), FileAvaiable(true), regions(nullptr),
 	x0(0), y0(0), w(1), h(1), dX(0), dY(0), texWidth(0), texHeight(0),
-	heightmaps(cacheSizes, this, &myWorkerThread)
+	heightmaps(cacheSizes, this, &myWorkerThread), depthmaps(cacheSizes, this, &myWorkerThread)
 {
 	tileSize = DEFAULT_TILE_SIZE;
 	InitNewWorld();
@@ -706,7 +706,7 @@ WorldMap::RenderRegionalData(int width, int height, float regionDim, RegionalDat
 	ForEachOnSceenRegionalMap(
 		[this, orthoProj, regionDim, width, height, &sectionLocs, &sections, &checks](RegionalMap* region, float xLoc, float yLoc)
 		{
-			region->GatherRelevantDataIDs(regionDim, width, height, xLoc, yLoc, checks, sectionLocs, sections);
+			region->GatherRelevantDataIDs(regionDim, width, height, xLoc, yLoc, checks, sectionLocs, sections, true);
 		}, width, height);
 
 	for (int i = 0; i < sections.size(); i++)
@@ -742,6 +742,41 @@ WorldMap::RenderRegionalData(int width, int height, float regionDim, RegionalDat
 			
 	}
 
+	if (mode != HILLSHADE)
+		return;
+
+	sectionLocs.clear();
+	sections.clear();
+	checks.clear();
+	checks.push_back(&depthmaps);
+
+	ForEachOnSceenRegionalMap(
+		[this, orthoProj, regionDim, width, height, &sectionLocs, &sections, &checks](RegionalMap* region, float xLoc, float yLoc)
+		{
+			region->GatherRelevantDataIDs(regionDim, width, height, xLoc, yLoc, checks, sectionLocs, sections, false);
+		}, width, height);
+
+	for (int i = 0; i < sections.size(); i++)
+	{
+		Depthmap dm = depthmaps.GetRaster(sections[i]);
+		glm::vec2 renderLoc = sectionLocs[i];
+		float dim = regionDim / sections[i].GetNumSectionsPerSide();
+		float meterDim = RegionalMap::METER_DIM / sections[i].GetNumSectionsPerSide();
+		float mpp = meterDim / dm.DIM;
+
+		glm::vec4 color = glm::vec4(1, 1, 1, 1);
+		if (sections[i].LOD == 2)
+			color = glm::vec4(1, 0, 0, 1);
+		else if (sections[i].LOD == 3)
+			color = glm::vec4(0, 1, 0, 1);
+		else if (sections[i].LOD == 4)
+			color = glm::vec4(0, 0, 1, 1);
+		else if (sections[i].LOD == 5)
+			color = glm::vec4(1, 1, 0, 1);
+		if (!dm.OkayToUse())
+			continue;
+		regionalDataRenderer.RenderRivers(renderLoc, dim, dim, orthoProj, dm.GetRawData(), mpp);
+	}
 }
 
 void

@@ -21,6 +21,7 @@
 #include "..\HydrologySolver\FileGlobals.h"
 
 #include "FluidSolver.h"
+#include <thread>
 
 using namespace std;
 using namespace RedBook;
@@ -413,10 +414,14 @@ RedBookInitWorld()
     ContinentGenAlgorithms::RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 500, 0.0002);
     cout << endl;
 
-    RegionalMap* center = myWorldMap->GetRegion(0, 0);
-    RegionalDataLoc top = RegionalDataLoc(center->GetWorldX(), center->GetWorldY(), 8, 8, 5);
-    FluidSolver solveSomeFluid(top.LOD);
-    solveSomeFluid.FullSolutionCycle(top, myWorldMap->heightmaps);
+    std::thread t([]() {
+        RegionalMap* center = myWorldMap->GetRegion(0, 0);
+        RegionalDataLoc top = RegionalDataLoc(center->GetWorldX(), center->GetWorldY(), 0, 0, 1);
+        FluidSolver solveSomeFluid(1);
+        solveSomeFluid.RecursiveSolutionCycle(top, myWorldMap->heightmaps, myWorldMap->depthmaps, 3);
+        //solveSomeFluid.FullSolutionCycle(top, myWorldMap->heightmaps, myWorldMap->depthmaps);
+    });
+    t.detach();
 }
 
 

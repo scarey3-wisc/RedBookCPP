@@ -132,7 +132,7 @@ int main(int argc, char** argv)
 			}
             myData.SetB(i, j, base + mainValley + slightSlope + sideValley + lake);
             //myData.SetB(i, j, 1);
-            myData.SetW(i, j, 0);
+            myData.SetW(i, j, 0.0);
         }
     }
     for (int j = 1; j < myData.hO - 1; j++)

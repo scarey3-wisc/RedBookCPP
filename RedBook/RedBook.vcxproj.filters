@@ -91,6 +91,9 @@
     <ClCompile Include="FluidSolver.cpp">
       <Filter>Algorithms\Source</Filter>
     </ClCompile>
+    <ClCompile Include="Depthmap.cpp">
+      <Filter>RegionalData\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\imgui\imconfig.h">
@@ -224,6 +227,12 @@
     </ClInclude>
     <ClInclude Include="FluidSolver.h">
       <Filter>Algorithms\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Depthmap.h">
+      <Filter>RegionalData\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="TileSizes.h">
+      <Filter>Utilities\Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -7,6 +7,7 @@
 #include "LocalMap.h"
 #include <cmath>
 #include "RegionalDataRasterManager.h"
+#include "TileSizes.h"
 
 class WorldMap;
 class SamplePoint;
@@ -61,7 +62,8 @@ public:
 		float myX, float myY,
 		std::vector<RegionalDataCheck*>& dataChecks,
 		std::vector<glm::vec2>& dataLocs,
-		std::vector<RegionalDataLoc>& dataIDs);
+		std::vector<RegionalDataLoc>& dataIDs,
+		bool launchAllocation);
 	void GatherLocalMapOutlineLocations(
 		int tileD,
 		int screenWidth, int screenHeight,
@@ -110,12 +112,12 @@ public:
 
 	static void ScrollOriginOffsetForOptimalCoastliness();
 
-	inline static constexpr int VORONOI_DIM = 192;
+	inline static constexpr int VORONOI_DIM = TileSizes::VORONOI_GRID_CELLS_PER_REGIONAL_MAP;
 	inline static constexpr double MIN_VORONOI_DIST = 1.41421356237 / VORONOI_DIM;
-	inline static constexpr int DIMENSION = 1 << (5 - 1); //2^4 = 16
-	inline static constexpr int METER_DIM = LocalMap::METER_DIM * DIMENSION; //how many meters on a side is a RegionalMap?
+	inline static constexpr int DIMENSION = TileSizes::LOCAL_MAPS_PER_REGIONAL_MAP;
+	inline static constexpr int METER_DIM = TileSizes::METERS_PER_REGIONAL_MAP; //how many meters on a side is a RegionalMap?
 	//if a RegionalMap gets negative coordinates, bad things happen to Perlin RNG
-	inline static int ORIGIN_OFFSET = 500;
+	inline static int ORIGIN_OFFSET = TileSizes::REGIONAL_MAPS_OFFSET_FROM_ORIGIN;
 	inline static constexpr const char* K_HEIGHTMAP_FOLDER_NAME = "Local_Heights_";
 	inline static constexpr const char* K_WATERMAP_FOLDER_NAME = "Local_Watermaps_";
 	inline static constexpr const char* K_RAINFLOWMAP_FOLDER_NAME = "Local_Rainflowmaps_";

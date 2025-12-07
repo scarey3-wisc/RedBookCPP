@@ -52,6 +52,10 @@ private:
 		{
 			std::fill(std::begin(data), std::end(data), DataType{});
 		}
+		inline void SetAll(DataType d)
+		{
+			std::fill(std::begin(data), std::end(data), d);
+		}
 		DataType data[w * h] = {};
 	};
 
@@ -136,6 +140,12 @@ public:
 				throw std::runtime_error("Dereferencing an outdated Data Raster Handle");
 			data->data.Set(d, index);
 		}
+		inline void SetAll(DataType d)
+		{
+			if (!Valid())
+				throw std::runtime_error("Dereferencing an outdated Data Raster Handle");
+			data->data.SetAll(d);
+		}
 		inline DataType* GetRawData()
 		{
 			if (!Valid())
@@ -182,7 +192,7 @@ private:
 // 	   METHODS NEEDED FOR PUBLIC HANDLE CLASS
 //------------------------------------------------------------------------------
 
-	SlotPtr GetSlotForID(const ID& id, bool demandImmediate)
+	SlotPtr GetSlotForID(const ID& id, bool demandImmediate, bool actuallyAllocate)
 	{
 		std::unique_lock<std::mutex> lock(manager_mutex);
 		auto it = idLookup.find(id);
@@ -208,6 +218,8 @@ private:
 			}
 			return slot;
 		}
+		if (!actuallyAllocate)
+			return nullptr;
 		auto allocationDecision = [this, id]()
 		{
 			std::unique_lock<std::mutex> innerLock(manager_mutex);
@@ -283,7 +295,7 @@ public:
 		DataRasterHandle& operator=(const DataRasterHandle& other) = default;
 		void Refresh()
 		{
-			LimitedDataRasterHandle::UpdateSlot(source->GetSlotForID(LimitedDataRasterHandle::myID), false);
+			LimitedDataRasterHandle::UpdateSlot(source->GetSlotForID(LimitedDataRasterHandle::myID, false, true));
 		}
 
 	private:
@@ -310,17 +322,22 @@ public:
 
 	void RefreshRaster(const ID& id)
 	{
-		GetSlotForID(id, false);
+		GetSlotForID(id, false, true);
 	}
 
 	DataRasterHandle GetRaster(const ID& id)
 	{
-		return DataRasterHandle(GetSlotForID(id, false), id, this);
+		return DataRasterHandle(GetSlotForID(id, false, true), id, this);
 	}
 
 	DataRasterHandle DemandRaster(const ID& id)
 	{
-		return DataRasterHandle(GetSlotForID(id, true), id, this);
+		return DataRasterHandle(GetSlotForID(id, true, true), id, this);
+	}
+
+	bool RasterAvailable(const ID& id)
+	{
+		return GetSlotForID(id, false, false) != nullptr;
 	}
 
 	int GetMaxCapacity() const { return fullCapacity; }

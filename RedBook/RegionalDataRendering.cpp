@@ -144,6 +144,31 @@ void main()
 
 //------------------------------------------------------------------------------
 
+static const std::string riversFragSource =
+sourceHeader +
+hsb2rgb +
+getHeightmapNormal + R"(
+
+in vec2 fragLocalPos; // Rectangle vertex from vertex shader
+out vec4 FragColor;
+
+uniform sampler2D uDepthmap;
+uniform float pixelWidthInMeters;
+uniform vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+
+void main() 
+{
+
+    float depth = texture(uDepthmap, fragLocalPos).r;
+    if(depth > 5.0)
+        FragColor = vec4(0.0, 0.0, 1.0, 1.0);
+    else
+        discard;
+}
+)";
+
+//------------------------------------------------------------------------------
+
 void
 RegionalDataRendering::Init() {
     if (initialzed) {
@@ -170,6 +195,76 @@ RegionalDataRendering::Init() {
     // You'll need to write helper functions to compile/link shaders
     bandedHeightProgram = CompileAndLinkShader(vertexSource.c_str(), bandedHeightFragSource.c_str());
 	hillshadeProgram = CompileAndLinkShader(vertexSource.c_str(), hillshadeFragSource.c_str());
+    riversProgram = CompileAndLinkShader(vertexSource.c_str(), riversFragSource.c_str());
+}
+
+//------------------------------------------------------------------------------
+
+void 
+RegionalDataRendering::RenderRivers(glm::vec2 location, float width, float height, const glm::mat4& viewProj, const float* depthmap, float metersPerPixel)
+{
+    glUseProgram(riversProgram);
+
+    GLuint depthTex;
+    glGenTextures(1, &depthTex);
+    glBindTexture(GL_TEXTURE_2D, depthTex);
+
+    // Upload as 32-bit signed integer texture
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_R32F,                // internal format (signed 32-bit ints)
+        REGIONAL_DATA_DIM + 2,
+        REGIONAL_DATA_DIM + 2,
+        0,
+        GL_RED,         // format: red channel only, integer interpretation
+        GL_FLOAT,                 // type: 32-bit signed integer
+        depthmap
+    );
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, depthTex);
+    glUniform1i(glGetUniformLocation(riversProgram, "uDepthmap"), 0);
+
+    // Wrapping control
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // Filtering (must be nearest for integer textures)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // Build model matrix: translate and scale unit rectangle
+    glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(width, height, 1.0f));
+
+    glm::mat4 mvp = viewProj;
+
+    // Set uniforms
+    GLint loc = glGetUniformLocation(hillshadeProgram, "uViewProj");
+    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mvp));
+
+    loc = glGetUniformLocation(hillshadeProgram, "aOffset");
+    glUniform2fv(loc, 1, glm::value_ptr(location));
+
+    loc = glGetUniformLocation(hillshadeProgram, "scale");
+    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scale));
+
+    loc = glGetUniformLocation(hillshadeProgram, "pixelWidthInMeters");
+    glUniform1f(loc, metersPerPixel);
+
+    loc = glGetUniformLocation(hillshadeProgram, "uDim");
+    glUniform1i(loc, REGIONAL_DATA_DIM - 1);
+
+    loc = glGetUniformLocation(hillshadeProgram, "uTexDim");
+    glUniform1i(loc, REGIONAL_DATA_DIM + 2);
+
+
+
+    glBindVertexArray(vao);
+    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1);
+    glBindVertexArray(0);
+
+    glDeleteTextures(1, &depthTex);
 }
 
 //------------------------------------------------------------------------------
@@ -318,4 +413,5 @@ RegionalDataRendering::Cleanup() {
     if (vao) glDeleteVertexArrays(1, &vao);
     if (bandedHeightProgram) glDeleteProgram(bandedHeightProgram);
 	if (hillshadeProgram) glDeleteProgram(hillshadeProgram);
+    if (riversProgram) glDeleteProgram(riversProgram);
 }
