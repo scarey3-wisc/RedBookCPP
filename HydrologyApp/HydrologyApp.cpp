@@ -119,7 +119,7 @@ ErrorNorm(SolverData<a>& coarseSolve, SolverData<b>& fineSolve)
             norm += del * del;
         }
     }
-    return sqrt(norm);
+    return sqrt(norm / (coarseSolve.wI * coarseSolve.hI));
 }
 
 template<int e>
@@ -243,6 +243,7 @@ void SetSinusoidalValley(SolverData<e>& data)
             data.SetB(i, j, val);
         }
     }
+    SetRain(data, 1);
 }
 
 void Scale_Test_SinusoidalValley()
@@ -255,42 +256,42 @@ void Scale_Test_SinusoidalValley()
     SolverData<5> s5(gravity, drag, domainSize);
     SetSinusoidalValley(s5);
     SetInitialWaterGuess(s5);
-    std::cout << "Mesh Level 5: " << TimeSolve(s5, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 5: " << TimeSolve(s5, 5, false) << "ms" << std::endl;
 
     SolverData<6> s6(gravity, drag, domainSize);
     SetSinusoidalValley(s6);
     SetInitialWaterGuess(s6);
-    std::cout << "Mesh Level 6: " << TimeSolve(s6, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 6: " << TimeSolve(s6, 5, false) << "ms" << std::endl;
 
     SolverData<7> s7(gravity, drag, domainSize);
     SetSinusoidalValley(s7);
     SetInitialWaterGuess(s7);
-    std::cout << "Mesh Level 7: " << TimeSolve(s7, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 7: " << TimeSolve(s7, 5, false) << "ms" << std::endl;
 
     SolverData<8> s8(gravity, drag, domainSize);
     SetSinusoidalValley(s8);
     SetInitialWaterGuess(s8);
-    std::cout << "Mesh Level 8: " << TimeSolve(s8, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 8: " << TimeSolve(s8, 5, false) << "ms" << std::endl;
 
     SolverData<9> s9(gravity, drag, domainSize);
     SetSinusoidalValley(s9);
     SetInitialWaterGuess(s9);
-    std::cout << "Mesh Level 9: " << TimeSolve(s9, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 9: " << TimeSolve(s9, 5, false) << "ms" << std::endl;
 
     SolverData<10> s10(gravity, drag, domainSize);
     SetSinusoidalValley(s10);
     SetInitialWaterGuess(s10);
-    std::cout << "Mesh Level 10: " << TimeSolve(s10, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 10: " << TimeSolve(s10, 5, false) << "ms" << std::endl;
 
     SolverData<11> s11(gravity, drag, domainSize);
     SetSinusoidalValley(s11);
     SetInitialWaterGuess(s11);
-    std::cout << "Mesh Level 11: " << TimeSolve(s11, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 11: " << TimeSolve(s11, 5, false) << "ms" << std::endl;
 
     SolverData<12> s12(gravity, drag, domainSize);
     SetSinusoidalValley(s12);
     SetInitialWaterGuess(s12);
-    std::cout << "Mesh Level 12: " << TimeSolve(s12, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 12: " << TimeSolve(s12, 5, false) << "ms" << std::endl;
 }
 
 void Itr_Test_SinusoidalValley()
@@ -421,6 +422,7 @@ void SetCaldera(SolverData<e>& data)
             data.SetB(i, j, val);
         }
     }
+    SetRain(data, 1);
 }
 
 void Scale_Test_Caldera()
@@ -433,42 +435,42 @@ void Scale_Test_Caldera()
     SolverData<5> s5(gravity, drag, domainSize);
     SetCaldera(s5);
     SetInitialWaterGuess(s5);
-    std::cout << "Mesh Level 5: " << TimeSolve(s5, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 5: " << TimeSolve(s5, 5, false) << "ms" << std::endl;
 
     SolverData<6> s6(gravity, drag, domainSize);
     SetCaldera(s6);
     SetInitialWaterGuess(s6);
-    std::cout << "Mesh Level 6: " << TimeSolve(s6, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 6: " << TimeSolve(s6, 5, false) << "ms" << std::endl;
 
     SolverData<7> s7(gravity, drag, domainSize);
     SetCaldera(s7);
     SetInitialWaterGuess(s7);
-    std::cout << "Mesh Level 7: " << TimeSolve(s7, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 7: " << TimeSolve(s7, 5, false) << "ms" << std::endl;
 
     SolverData<8> s8(gravity, drag, domainSize);
     SetCaldera(s8);
     SetInitialWaterGuess(s8);
-    std::cout << "Mesh Level 8: " << TimeSolve(s8, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 8: " << TimeSolve(s8, 5, false) << "ms" << std::endl;
 
     SolverData<9> s9(gravity, drag, domainSize);
     SetCaldera(s9);
     SetInitialWaterGuess(s9);
-    std::cout << "Mesh Level 9: " << TimeSolve(s9, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 9: " << TimeSolve(s9, 5, false) << "ms" << std::endl;
 
     SolverData<10> s10(gravity, drag, domainSize);
     SetCaldera(s10);
     SetInitialWaterGuess(s10);
-    std::cout << "Mesh Level 10: " << TimeSolve(s10, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 10: " << TimeSolve(s10, 5, false) << "ms" << std::endl;
 
     SolverData<11> s11(gravity, drag, domainSize);
     SetCaldera(s11);
     SetInitialWaterGuess(s11);
-    std::cout << "Mesh Level 11: " << TimeSolve(s11, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 11: " << TimeSolve(s11, 5, false) << "ms" << std::endl;
 
     SolverData<12> s12(gravity, drag, domainSize);
     SetCaldera(s12);
     SetInitialWaterGuess(s12);
-    std::cout << "Mesh Level 12: " << TimeSolve(s12, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 12: " << TimeSolve(s12, 5, false) << "ms" << std::endl;
 }
 
 void Itr_Test_Caldera()
@@ -544,6 +546,7 @@ void SetFurrowedSlope(SolverData<e>& data)
             data.SetB(i, j, val);
         }
     }
+    SetRain(data, 1);
 }
 
 void Scale_Test_FurrowedSlope()
@@ -556,42 +559,42 @@ void Scale_Test_FurrowedSlope()
     SolverData<5> s5(gravity, drag, domainSize);
     SetFurrowedSlope(s5);
     SetInitialWaterGuess(s5);
-    std::cout << "Mesh Level 5: " << TimeSolve(s5, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 5: " << TimeSolve(s5, 5, false) << "ms" << std::endl;
 
     SolverData<6> s6(gravity, drag, domainSize);
     SetFurrowedSlope(s6);
     SetInitialWaterGuess(s6);
-    std::cout << "Mesh Level 6: " << TimeSolve(s6, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 6: " << TimeSolve(s6, 5, false) << "ms" << std::endl;
 
     SolverData<7> s7(gravity, drag, domainSize);
     SetFurrowedSlope(s7);
     SetInitialWaterGuess(s7);
-    std::cout << "Mesh Level 7: " << TimeSolve(s7, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 7: " << TimeSolve(s7, 5, false) << "ms" << std::endl;
 
     SolverData<8> s8(gravity, drag, domainSize);
     SetFurrowedSlope(s8);
     SetInitialWaterGuess(s8);
-    std::cout << "Mesh Level 8: " << TimeSolve(s8, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 8: " << TimeSolve(s8, 5, false) << "ms" << std::endl;
 
     SolverData<9> s9(gravity, drag, domainSize);
     SetFurrowedSlope(s9);
     SetInitialWaterGuess(s9);
-    std::cout << "Mesh Level 9: " << TimeSolve(s9, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 9: " << TimeSolve(s9, 5, false) << "ms" << std::endl;
 
     SolverData<10> s10(gravity, drag, domainSize);
     SetFurrowedSlope(s10);
     SetInitialWaterGuess(s10);
-    std::cout << "Mesh Level 10: " << TimeSolve(s10, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 10: " << TimeSolve(s10, 5, false) << "ms" << std::endl;
 
     SolverData<11> s11(gravity, drag, domainSize);
     SetFurrowedSlope(s11);
     SetInitialWaterGuess(s11);
-    std::cout << "Mesh Level 11: " << TimeSolve(s11, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 11: " << TimeSolve(s11, 5, false) << "ms" << std::endl;
 
     SolverData<12> s12(gravity, drag, domainSize);
     SetFurrowedSlope(s12);
     SetInitialWaterGuess(s12);
-    std::cout << "Mesh Level 12: " << TimeSolve(s12, 10, false) << "ms" << std::endl;
+    std::cout << "Mesh Level 12: " << TimeSolve(s12, 5, false) << "ms" << std::endl;
 }
 
 void Itr_Test_FurrowedSlope()
@@ -650,9 +653,9 @@ main_test_appearance()
     SetRain(myData, 1);
     SetInitialWaterGuess(myData);
 
-    SetSinusoidalValley(myData);
+    //SetSinusoidalValley(myData);
     //SetCaldera(myData);
-    //SetFurrowedSlope(myData);
+    SetFurrowedSlope(myData);
 
     LaunchSolve(myData, true);
     std::filesystem::path outPath = MY_PATH;
