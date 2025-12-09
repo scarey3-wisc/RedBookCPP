@@ -134,6 +134,8 @@ void RedBookInfoPanel(float panelWidth)
     }
 	ImGui::Checkbox("Toggle Outlines", &Switches::OUTLINE_MAPS);
 	ImGui::Checkbox("Toggle Voronoi Centers", &Switches::PAINT_VORONOI_CENTERS);
+    ImGui::Checkbox("Toggle River Visibility", &Switches::PAINT_RIVERS);
+    ImGui::Checkbox("Throttle Framerate", &Switches::THROTTLE_FRAMERATE);
 
 	ImGui::NewLine();
     ImGui::NewLine();
@@ -369,56 +371,63 @@ RedBookInitWorld()
 {
     std::array<int, REGIONAL_MAP_NUM_LODS> capacities = std::to_array(REGIONAL_RASTER_CAPCITIES);
     myWorldMap = new WorldMap("Nerean Sea", capacities);
-    vector<SamplePoint*> vp;
-    myWorldMap->FillAllContinents(0, 0, vp);
+    vector<SamplePoint*> allSamplePoints;
+    myWorldMap->FillAllContinents(0, 0, allSamplePoints);
     StartupTests();
 
-    vector<SamplePoint*> coastal = VoronoiAlgorithms::FindBoundaryPoints(vp, TerrainTemplate::OCEAN);
-    VoronoiAlgorithms::ConvertSeasToLakes(coastal, Switches::MAX_SAMPLE_POINTS_IN_LAKE);
-    VoronoiAlgorithms::ConvertCoastalLakeToOcean(vp);
+    
 
-    vector<SamplePoint*> continent = VoronoiAlgorithms::FindAllWithinBoundary(vp, TerrainTemplate::OCEAN);
-    ContinentGenAlgorithms::BlurUpliftForTectonicAlgorithm(continent, 25, 5);
+    std::thread t([allSamplePoints]() {
 
-    vector<SamplePoint*> rough = VoronoiAlgorithms::FindAllOfType(continent, TerrainTemplate::ROUGH);
-    vector<SamplePoint*> mountains = VoronoiAlgorithms::FindAllOfType(continent, TerrainTemplate::MOUNTAINS);
+        vector<SamplePoint*> vp = allSamplePoints;
+        vector<SamplePoint*> coastal = VoronoiAlgorithms::FindBoundaryPoints(vp, TerrainTemplate::OCEAN);
+        VoronoiAlgorithms::ConvertSeasToLakes(coastal, Switches::MAX_SAMPLE_POINTS_IN_LAKE);
+        VoronoiAlgorithms::ConvertCoastalLakeToOcean(vp);
 
-    //paper recommends 2.5 * 10^5 and 5.611 * 10^-7 for erosion
-    cout << "Tectonic Uplift Algo: Detail-0" << endl << endl;
-    //ContinentGenAlgorithms.RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
+        vector<SamplePoint*> continent = VoronoiAlgorithms::FindAllWithinBoundary(vp, TerrainTemplate::OCEAN);
+        ContinentGenAlgorithms::BlurUpliftForTectonicAlgorithm(continent, 25, 5);
 
-    for (SamplePoint* sp : rough)
-    {
-        if (Rand::Float() < 0.99)
-            continue;
-        sp->MakeLake();
-    }
+        vector<SamplePoint*> rough = VoronoiAlgorithms::FindAllOfType(continent, TerrainTemplate::ROUGH);
+        vector<SamplePoint*> mountains = VoronoiAlgorithms::FindAllOfType(continent, TerrainTemplate::MOUNTAINS);
 
-    VoronoiAlgorithms::IncreaseFractureLevel(rough);
-    cout << "Tectonic Uplift Algo: Detail-1" << endl << endl;
-    //ContinentGenAlgorithms.RunTectonicUpliftAlgorithm(rough, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
+        //paper recommends 2.5 * 10^5 and 5.611 * 10^-7 for erosion
+        cout << "Tectonic Uplift Algo: Detail-0" << endl << endl;
+        //ContinentGenAlgorithms.RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
 
-    for (SamplePoint* sp : mountains)
-    {
-        if (Rand::Float() < 0.96)
-            continue;
-        sp->MakeLake();
-    }
+        for (SamplePoint* sp : rough)
+        {
+            if (Rand::Float() < 0.99)
+                continue;
+            sp->MakeLake();
+        }
 
-    VoronoiAlgorithms::IncreaseFractureLevel(mountains);
-    cout << "Tectonic Uplift Algo: Detail-2" << endl << endl;
-    //ContinentGenAlgorithms.RunTectonicUpliftAlgorithm(mountains, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
+        VoronoiAlgorithms::IncreaseFractureLevel(rough);
+        cout << "Tectonic Uplift Algo: Detail-1" << endl << endl;
+        //ContinentGenAlgorithms.RunTectonicUpliftAlgorithm(rough, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
+
+        for (SamplePoint* sp : mountains)
+        {
+            if (Rand::Float() < 0.96)
+                continue;
+            sp->MakeLake();
+        }
+
+        VoronoiAlgorithms::IncreaseFractureLevel(mountains);
+        cout << "Tectonic Uplift Algo: Detail-2" << endl << endl;
+        //ContinentGenAlgorithms.RunTectonicUpliftAlgorithm(mountains, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
 
 
-    cout << "Tectonic Uplift Algo: River Reset" << endl;
-    ContinentGenAlgorithms::RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 500, 0.0002);
-    cout << endl;
+        cout << "Tectonic Uplift Algo: River Reset" << endl;
+        ContinentGenAlgorithms::RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 500, 0.0002);
+        cout << endl;
 
-    std::thread t([]() {
+        Switches::TERRAIN_READY_TO_PAINT = true;
+
+
         RegionalMap* center = myWorldMap->GetRegion(0, 0);
         RegionalDataLoc top = RegionalDataLoc(center->GetWorldX(), center->GetWorldY(), 0, 0, 1);
         FluidSolver solveSomeFluid(1);
-        solveSomeFluid.RecursiveSolutionCycle(top, myWorldMap->heightmaps, myWorldMap->depthmaps, 3);
+        solveSomeFluid.RecursiveSolutionCycle(top, myWorldMap->heightmaps, myWorldMap->depthmaps, 5);
         //solveSomeFluid.FullSolutionCycle(top, myWorldMap->heightmaps, myWorldMap->depthmaps);
     });
     t.detach();
@@ -551,6 +560,8 @@ int WINAPI WinMain(
     RedBookInitWorld();
     while (!glfwWindowShouldClose(window))
     {
+        if(Switches::THROTTLE_FRAMERATE)
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.

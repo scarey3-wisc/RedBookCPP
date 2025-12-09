@@ -103,40 +103,40 @@ void main()
     vec3 normal = getHeightmapNormal(uHeightmap, fragLocalPos, pixelWidthInMeters, 65536.0);
     float light = dot(normal, lightDir);
 	float brt = (light + 0.1) / 1.1;
-
-    if(brt < 0)
-        brt = 0;
-    if(brt > 1.0)
-        brt = 1.0;
+    brt = clamp(brt, 0, 1);
     
     float sat = 0.0;
     float hue = 0.0;
-    if(height < 50)
+    if(height < 100)
     {
         hue = 56.0 / 360.0;
         sat = .51;
     }
-    else if (height < 200)
+    else if (height < 500)
     {
         hue = 110.0 / 360.0;
-        sat = 0.67;
+        sat = 0.75;
+        brt = brt - 0.25;
     }
     else if(height < 1000)
     {
         hue = 129.0 / 360.0;
         sat = 0.71;
+        brt = brt - 0.2;
     }
     else if(height < 3000)
     {
         hue = 38.0 / 360.0;
         sat = 0.27;
+        brt = brt - 0.1;
     }
     else
     {
         hue = 0.0;
         sat = 0.0;
     }
-		
+	
+    brt = clamp(brt, 0, 1);
 	FragColor = vec4(hsb2rgb(vec3(hue, sat, brt)), 1.0);
     
 }
@@ -153,17 +153,63 @@ in vec2 fragLocalPos; // Rectangle vertex from vertex shader
 out vec4 FragColor;
 
 uniform sampler2D uDepthmap;
+uniform isampler2D uHeightmap;
 uniform float pixelWidthInMeters;
 uniform vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
 
 void main() 
 {
 
-    float depth = texture(uDepthmap, fragLocalPos).r;
-    if(depth > 5.0)
-        FragColor = vec4(0.0, 0.0, 1.0, 1.0);
-    else
+    int h = texture(uHeightmap, fragLocalPos).r; // sample red channel
+    if(h < 0) h = 0; // clamp negative heights to zero
+    if(h == 0)
         discard;
+    
+    float height = float(h) / 65536.0;
+    if(height < 0)
+        discard;
+
+    vec3 normal = getHeightmapNormal(uHeightmap, fragLocalPos, pixelWidthInMeters, 65536.0);
+
+    float depth = texture(uDepthmap, fragLocalPos).r;
+    
+    if (depth < 1)
+        discard;
+
+    depth = depth - 1;
+
+    float slope = 1.0 - normal.z;
+
+    if (slope == 0)
+    {
+        float w = clamp(depth / 200, 0.0, 1.0);
+        vec3 deepLake = vec3(0, 0.3, 0.43);
+        vec3 shallowLake = vec3(0.15, 0.35, 0.5);
+        vec3 lakeColor = mix(
+            shallowLake,
+            deepLake,
+            smoothstep(0.0, 1.0, w)
+        );
+        
+        float shallow = clamp(1.0 - depth / 50.0, 0.0, 1.0);
+        lakeColor += shallow * 0.05; 
+        FragColor = vec4(lakeColor, 1.0);
+        return;
+    }
+    
+
+    vec3 riverShallow = vec3(0.15, 0.35, 0.5);
+    vec3 riverDeep    = vec3(0.1, 0.25, 0.4);
+    vec3 riverFoam    = vec3(0.90, 0.95, 1.0);
+
+    float t = clamp(depth / 100.0, 0.0, 1.0);
+    vec3 riverColor = mix(riverShallow, riverDeep, t);
+
+    float foam = smoothstep(0.25, 0.55, slope); 
+    riverColor = mix(riverColor, riverFoam, foam * 0.4);
+
+
+    FragColor = vec4(riverColor, 1.0);
 }
 )";
 
@@ -201,30 +247,62 @@ RegionalDataRendering::Init() {
 //------------------------------------------------------------------------------
 
 void 
-RegionalDataRendering::RenderRivers(glm::vec2 location, float width, float height, const glm::mat4& viewProj, const float* depthmap, float metersPerPixel)
+RegionalDataRendering::RenderRivers(glm::vec2 location, float width, float height, const glm::mat4& viewProj, const int32_t* heightmap, const float* depthmap, float metersPerPixel)
 {
     glUseProgram(riversProgram);
 
     GLuint depthTex;
     glGenTextures(1, &depthTex);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, depthTex);
 
     // Upload as 32-bit signed integer texture
     glTexImage2D(
         GL_TEXTURE_2D,
         0,
-        GL_R32F,                // internal format (signed 32-bit ints)
+        GL_R32F,                // internal format (signed 32-bit float)
         REGIONAL_DATA_DIM + 2,
         REGIONAL_DATA_DIM + 2,
         0,
-        GL_RED,         // format: red channel only, integer interpretation
-        GL_FLOAT,                 // type: 32-bit signed integer
+        GL_RED,         // format: red channel only, float interpretation
+        GL_FLOAT,                 // type: 32-bit signed float
         depthmap
     );
 
-    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, depthTex);
     glUniform1i(glGetUniformLocation(riversProgram, "uDepthmap"), 0);
+
+    // Wrapping control
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // Filtering (must be nearest for integer textures)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+
+
+    GLuint heightTex;
+    glGenTextures(1, &heightTex);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, heightTex);
+
+    // Upload as 32-bit signed integer texture
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_R32I,                // internal format (signed 32-bit ints)
+        REGIONAL_DATA_DIM + 2,
+        REGIONAL_DATA_DIM + 2,
+        0,
+        GL_RED_INTEGER,         // format: red channel only, integer interpretation
+        GL_INT,                 // type: 32-bit signed integer
+        heightmap
+    );
+
+    
+    glBindTexture(GL_TEXTURE_2D, heightTex);
+    glUniform1i(glGetUniformLocation(riversProgram, "uHeightmap"), 1);
 
     // Wrapping control
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -240,22 +318,22 @@ RegionalDataRendering::RenderRivers(glm::vec2 location, float width, float heigh
     glm::mat4 mvp = viewProj;
 
     // Set uniforms
-    GLint loc = glGetUniformLocation(hillshadeProgram, "uViewProj");
+    GLint loc = glGetUniformLocation(riversProgram, "uViewProj");
     glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mvp));
 
-    loc = glGetUniformLocation(hillshadeProgram, "aOffset");
+    loc = glGetUniformLocation(riversProgram, "aOffset");
     glUniform2fv(loc, 1, glm::value_ptr(location));
 
-    loc = glGetUniformLocation(hillshadeProgram, "scale");
+    loc = glGetUniformLocation(riversProgram, "scale");
     glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scale));
 
-    loc = glGetUniformLocation(hillshadeProgram, "pixelWidthInMeters");
+    loc = glGetUniformLocation(riversProgram, "pixelWidthInMeters");
     glUniform1f(loc, metersPerPixel);
 
-    loc = glGetUniformLocation(hillshadeProgram, "uDim");
+    loc = glGetUniformLocation(riversProgram, "uDim");
     glUniform1i(loc, REGIONAL_DATA_DIM - 1);
 
-    loc = glGetUniformLocation(hillshadeProgram, "uTexDim");
+    loc = glGetUniformLocation(riversProgram, "uTexDim");
     glUniform1i(loc, REGIONAL_DATA_DIM + 2);
 
 
@@ -265,6 +343,7 @@ RegionalDataRendering::RenderRivers(glm::vec2 location, float width, float heigh
     glBindVertexArray(0);
 
     glDeleteTextures(1, &depthTex);
+    glDeleteTextures(1, &heightTex);
 }
 
 //------------------------------------------------------------------------------

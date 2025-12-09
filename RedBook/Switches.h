@@ -8,6 +8,10 @@ namespace Switches
 	extern bool SIMPLE_TERRAIN_TYPE_RENDERING;
 	extern bool OUTLINE_MAPS;
 	extern bool PAINT_VORONOI_CENTERS;
+	extern bool PAINT_RIVERS;
+
+	extern bool THROTTLE_FRAMERATE;
+	extern bool TERRAIN_READY_TO_PAINT;
 
 	inline constexpr bool POISSON_DENSE = false;
 	inline constexpr bool POISSON_BIASED = false;

@@ -20,7 +20,7 @@ class SolverDataBase
 {
 public:
 	SolverDataBase(double gravity, double drag, double sideLength) :
-		g(gravity), l(drag), s(sideLength / wI), fc(gravity / drag), s2(s*s),
+		g(gravity), l(drag), s(sideLength / (wI - 1)), fc(gravity / drag), s2(s*s),
 		B(DataPointer<wO, hO>::AllocateNewPointer()),
 		W(DataPointer<wO, hO>::AllocateNewPointer()),
 		R(DataPointer<wO, hO>::AllocateNewPointer()),
@@ -107,7 +107,7 @@ public:
 	}
 	inline void SetSpacing(double domainSideLength)
 	{
-		s = domainSideLength / wI;
+		s = domainSideLength / (wI - 1);
 		s2 = s * s;
 	}
 	inline void SetGravity(double gravity)
@@ -191,15 +191,15 @@ public:
 //-----------------------------------------------------------------------------
 
 #ifdef USE_PRESMOOTHED_PARDISO
-	virtual void SolveWithPreSmoothedPARDISO(double maxNorm, double minValue, double maxValue, int verbosity) = 0;
+	virtual int SolveWithPreSmoothedPARDISO(double maxNorm, double minValue, double maxValue, int verbosity) = 0;
 #endif
 
 #ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
-	virtual void SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity) = 0;
+	virtual int SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity) = 0;
 #endif
 
 #ifdef USE_PRESMOOTHED_MULTIGRID
-	virtual void SolveWithMultigrid(double maxNorm, double minValue, double maxValue, int maxVCycles, int maxGSItr, int verbosity) = 0;
+	virtual int SolveWithMultigrid(double maxNorm, double minValue, double maxValue, int maxVCycles, int maxGSItr, int verbosity) = 0;
 
 	virtual void PrepareMultigridJacobians() = 0;
 
@@ -208,7 +208,7 @@ public:
 
 //-----------------------------------------------------------------------------
 
-	void SolveWithGaussSeidel(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity)
+	int SolveWithGaussSeidel(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity)
 	{
 		int itr = 0;
 		while (true)
@@ -223,7 +223,11 @@ public:
 			if (verbosity > 0)
 				std::cout << ", residual norm: " << residualNorm;
 			if (residualNorm < maxNorm)
+			{
+				if(verbosity > 0)
+					std::cout << std::endl;
 				break;
+			}
 			
 			U.SetAll(0);
 			int gsItr = 0;
@@ -247,13 +251,19 @@ public:
 				std::cout << ", requiring " << gsItr << " GS iterations" << std::endl;
 			W.AddCorrectionToHaloedData(U, 1, minValue, maxValue);
 			itr++;
+			if (itr > 2000)
+			{
+				std::cout << "Failed to converge after 2000 Newton Iterations" << std::endl;
+				break;
+			}
 		}
+		return itr;
 	}
 
 //-----------------------------------------------------------------------------
 
 #ifdef USE_PARDISO
-	void SolveWithPARDISO(double maxNorm, double minValue, double maxValue, int verbosity)
+	int SolveWithPARDISO(double maxNorm, double minValue, double maxValue, int verbosity)
 	{
 		int itr = 0;
 		while (true)
@@ -270,7 +280,11 @@ public:
 			if (verbosity > 0)
 				std::cout << ", residual norm: " << residualNorm << std::endl;
 			if (residualNorm < maxNorm)
+			{
+				if (verbosity > 0)
+					std::cout << std::endl;
 				break;
+			}
 
 			U.SetAll(0);
 			SolveSparseSystemWithPARDISO(
@@ -283,8 +297,14 @@ public:
 				false);
 			W.AddCorrectionToHaloedData(U, 1, minValue, maxValue);
 			itr++;
+			if (itr > 2000)
+			{
+				std::cout << "Failed to converge after 2000 Newton Iterations" << std::endl;
+				break;
+			}
 		}
 		TerminatePARDISOStructures(JS.matrixSize, JS.GetRowOffsetsPtr(), JS.GetColumnIndicesPtr(), false);
+		return itr;
 	}
 #endif	
 
@@ -414,7 +434,6 @@ private:
 		// should be "int" when using 32-bit architectures, or "long int"
 		// for 64-bit architectures. void* should be OK in both cases
 		MKL_INT maxfct, mnum, phase, error, msglvl;
-		MKL_INT i;
 		float ddum;               // Scalar dummy (PARDISO needs it)
 		MKL_INT idum;             // Integer dummy (PARDISO needs it)
 
@@ -466,7 +485,6 @@ private:
 		// should be "int" when using 32-bit architectures, or "long int"
 		// for 64-bit architectures. void* should be OK in both cases
 		MKL_INT maxfct, mnum, phase, error, msglvl;
-		MKL_INT i;
 		float ddum;               // Scalar dummy (PARDISO needs it)
 		MKL_INT idum;             // Integer dummy (PARDISO needs it)
 
@@ -682,7 +700,7 @@ public:
 #endif
 
 #ifdef USE_PRESMOOTHED_PARDISO
-	void SolveWithPreSmoothedPARDISO(double maxNorm, double minValue, double maxValue, int verbosity)
+	int SolveWithPreSmoothedPARDISO(double maxNorm, double minValue, double maxValue, int verbosity)
 	{
 		MultigridOps::Restrict<e>(this->R, child.R);
 		MultigridOps::Restrict<e>(this->B, child.B);
@@ -693,13 +711,14 @@ public:
 		this->CalculateF();
 		this->GaussSeidelIterationPostInterpolation();
 
-		std::cout << "Solving on Mesh level " << e << std::endl;
-		this->SolveWithPARDISO(maxNorm, minValue, maxValue, verbosity);
+		if(verbosity > 0)
+			std::cout << "Solving on Mesh level " << e << std::endl;
+		return this->SolveWithPARDISO(maxNorm, minValue, maxValue, verbosity);
 	}
 #endif
 
 #ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
-	void SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity)
+	int SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity)
 	{
 		MultigridOps::Restrict<e>(this->R, child.R);
 		MultigridOps::Restrict<e>(this->B, child.B);
@@ -710,15 +729,16 @@ public:
 		this->CalculateF();
 		this->GaussSeidelIterationPostInterpolation();
 
-		std::cout << "Solving on Mesh level " << e << std::endl;
-		this->SolveWithGaussSeidel(maxNorm, minValue, maxValue, maxItr, verbosity);
+		if(verbosity > 0)
+			std::cout << "Solving on Mesh level " << e << std::endl;
+		return this->SolveWithGaussSeidel(maxNorm, minValue, maxValue, maxItr, verbosity);
 	}
 #endif
 
 //-----------------------------------------------------------------------------
 
 #ifdef USE_PRESMOOTHED_MULTIGRID
-	void SolveWithMultigrid(double maxNorm, double minValue, double maxValue, int maxVCycles, int maxGSItr, int verbosity)
+	int SolveWithMultigrid(double maxNorm, double minValue, double maxValue, int maxVCycles, int maxGSItr, int verbosity)
 	{
 		MultigridOps::Restrict<e>(this->R, child.R);
 		MultigridOps::Restrict<e>(this->B, child.B);
@@ -727,9 +747,10 @@ public:
 		MultigridOps::Interpolate<e>(this->W, child.W);
 		this->CalculateJ();
 		this->CalculateF();
-		this->GaussSeidelIterationPostInterpolation();
+		//this->GaussSeidelIterationPostInterpolation();
 
-		std::cout << "Solving on Mesh level " << e << std::endl;
+		if(verbosity > 0)
+			std::cout << "Solving on Mesh level " << e << std::endl;
 
 		int itr = 0;
 		while (true)
@@ -741,11 +762,15 @@ public:
 			this->CalculateF();
 			this->F.Scale(-1);
 
-			double residualNorm = F.Norm();
+			double residualNorm = this->F.Norm();
 			if (verbosity > 0)
 				std::cout << ", residual norm: " << residualNorm;
-			if (residualNorm < maxNorm)
+			if (residualNorm < maxNorm && itr > 0)
+			{
+				if(verbosity > 0)
+					std::cout << std::endl;
 				break;
+			}
 
 			this->U.SetAll(0);
 
@@ -758,7 +783,7 @@ public:
 				double norm = this->O.Norm();
 				if (verbosity > 1)
 					std::cout << ", r: " << norm << std::endl;
-				if (norm < maxNorm)
+				if (norm < maxNorm && vItr > 0)
 					break;
 				VCycle(maxNorm, maxGSItr, 4, 4);
 				vItr++;
@@ -769,7 +794,13 @@ public:
 				std::cout << ", requiring " << vItr << " V Cycles" << std::endl;
 			this->W.AddCorrectionToHaloedData(this->U, 1, minValue, maxValue);
 			itr++;
+			if (itr > 2000)
+			{
+				std::cout << "Failed to converge after 2000 Newton Iterations" << std::endl;
+				break;
+			}
 		}
+		return itr;
 	}
 	void PrepareMultigridJacobians()
 	{
@@ -827,26 +858,29 @@ public:
 	}
 
 #ifdef USE_PRESMOOTHED_PARDISO
-	void SolveWithPreSmoothedPARDISO(double maxNorm, double minValue, double maxValue, int verbosity)
+	int SolveWithPreSmoothedPARDISO(double maxNorm, double minValue, double maxValue, int verbosity)
 	{
-		std::cout << "Solving on Mesh level " << 4 << std::endl;
-		this->SolveWithPARDISO(maxNorm, minValue, maxValue, verbosity);
+		if(verbosity > 0)
+			std::cout << "Solving on Mesh level " << 4 << std::endl;
+		return this->SolveWithPARDISO(maxNorm, minValue, maxValue, verbosity);
 	}
 #endif
 
 #ifdef USE_PRESMOOTHED_GAUSS_SEIDEL
-	void SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity)
+	int SolveWithPseudoMultigrid(double maxNorm, double minValue, double maxValue, int maxItr, int verbosity)
 	{
-		std::cout << "Solving on Mesh level " << 4 << std::endl;
-		this->SolveWithGaussSeidel(maxNorm, minValue, maxValue, maxItr, verbosity);
+		if(verbosity > 0)
+			std::cout << "Solving on Mesh level " << 4 << std::endl;
+		return this->SolveWithGaussSeidel(maxNorm, minValue, maxValue, maxItr, verbosity);
 	}
 #endif
 
 #ifdef USE_PRESMOOTHED_MULTIGRID
-	void SolveWithMultigrid(double maxNorm, double minValue, double maxValue, int maxVCycles, int maxGSItr, int verbosity)
+	int SolveWithMultigrid(double maxNorm, double minValue, double maxValue, int maxVCycles, int maxGSItr, int verbosity)
 	{
-		std::cout << "Solving on Mesh level " << 4 << std::endl;
-		this->SolveWithGaussSeidel(maxNorm, minValue, maxValue, maxGSItr, verbosity);
+		if(verbosity > 0)
+			std::cout << "Solving on Mesh level " << 4 << std::endl;
+		return this->SolveWithGaussSeidel(maxNorm, minValue, maxValue, maxGSItr, verbosity);
 	}
 	void PrepareMultigridJacobians()
 	{

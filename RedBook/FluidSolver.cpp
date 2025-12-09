@@ -178,28 +178,14 @@ FluidSolver::LoadHeightmap(RegionalDataLoc where, HeightmapManager& source)
     meterDim /= where.GetNumSectionsPerSide();
     data->SetSpacing(meterDim);
     Heightmap target = source.DemandRaster(where);
-    double minB = std::numeric_limits<double>::max();
     for (int j = 0; j < data->hO; j++)
     {
         for (int i = 0; i < data->wO; i++)
         {
-            data->SetB(i, j, 1 + target.GetElevation(i + 1, j + 1));
-            if (data->GetB(i, j) < minB)
-                minB = data->GetB(i, j);
-        }
-    }
-    for (int j = 0; j < data->hO; j++)
-    {
-        for (int i = 0; i < data->wO; i++)
-        {
-            data->SetB(i, j, data->GetB(i, j) - minB + 0.01);
-        }
-    }
-    for (int j = 0; j < data->hO; j++)
-    {
-        for (int i = 0; i < data->wO; i++)
-        {
-            data->SetB(i, j, data->GetB(i, j) * 1.0); //If we want to scale B down
+            double elev = target.GetElevation(i + 1, j + 1);
+            if (elev == 0)
+                elev = -100;
+            data->SetB(i, j, elev);
         }
     }
 }

@@ -46,6 +46,7 @@ public:
 	double Norm()
 	{
 		double result = 0;
+#pragma omp parallel for reduction(+:result)
 		for (int j = 0; j < h; j++)
 		{
 			for (int i = 0; i < w; i++)
@@ -61,6 +62,7 @@ public:
 	double L1()
 	{
 		double result = 0;
+#pragma omp parallel for reduction(+:result)
 		for (int j = 0; j < h; j++)
 		{
 			for (int i = 0; i < w; i++)
@@ -82,6 +84,7 @@ public:
 
 	void Scale(double scale)
 	{
+#pragma omp parallel for
 		for (int j = 0; j < h; j++)
 		{
 			for (int i = 0; i < w; i++)
@@ -95,6 +98,7 @@ public:
 
 	void Add(DataPointer& b, double scale)
 	{
+#pragma omp parallel for
 		for (int j = 0; j < h; j++)
 		{
 			for (int i = 0; i < w; i++)
@@ -108,6 +112,7 @@ public:
 
 	void AddAbs(DataPointer& b, double scale)
 	{
+#pragma omp parallel for
 		for (int j = 0; j < h; j++)
 		{
 			for (int i = 0; i < w; i++)
@@ -121,6 +126,7 @@ public:
 
 	void Add(double del)
 	{
+#pragma omp parallel for
 		for (int j = 0; j < h; j++)
 		{
 			for (int i = 0; i < w; i++)
@@ -134,6 +140,7 @@ public:
 
 	void AddCorrectionToHaloedData(DataPointer<w - 2, h - 2>& b, double scale, double min, double max)
 	{
+#pragma omp parallel for
 		for (int j = 1; j < h - 1; j++)
 		{
 			for (int i = 1; i < w - 1; i++)
